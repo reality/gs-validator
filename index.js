@@ -1,6 +1,7 @@
 var url = require('url'),
     patients = {},
     indexTemplate = require('./index.pug'),
+    listTemplate = require('./list.pug'),
     viewTemplate = require('./view.pug'),
     dataTable = require('datatables'),
     FileSaver = require('file-saver'),
@@ -10,7 +11,6 @@ var url = require('url'),
 
 $(document).ready(function() {
   loadIndex();
-//  showInfoPopup();
 });
 
 // TODO: add progress to main table, fill up results as you go, semi-autosave feature, etc, then done
@@ -41,14 +41,17 @@ var saveUserInfo = function() {
  * Load Index
  */
 var loadIndex = function(cb) {
+  document.getElementById("content").innerHTML = indexTemplate({});
+  showInfoPopup();
+}
+
+var loadList = function(cb) {
   var u = url.parse(window.location.href, true).query;
-  document.getElementById("content").innerHTML = indexTemplate({
+  document.getElementById("content").innerHTML = listTemplate({
     patients: patients
   });
 
   document.getElementById("save").onclick = function() {
-    console.log(results);
-    console.log('hello');
     saveText(JSON.stringify({ 'results': results }), "results.json");
   };
 
@@ -62,6 +65,7 @@ var loadIndex = function(cb) {
   table = $('#plist').DataTable({ 'iDisplayLength': 100 });
 
   // TODO: mark done patients
+  // I thought that was already done?
 
   // Apply the search
   table.columns().every(function() {
