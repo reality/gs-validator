@@ -1,0 +1,47 @@
+.container  
+  - var c = 0;
+  h1 Patients List
+  button#save.submit(value='Submit' style='font-size:20px') Save Results
+  div#infoModal.modal.fade(tabindex='-1' role='dialog' aria-labelledby='#finaliseModalLabel' aria-hidden='true')
+    div.modal-dialog(role='document')
+      div.modal-content
+        div.modal-header
+          h5#infoModalLabel.modal-title Validator Details
+
+        div.modal-body
+          div.form-group.form-control-static.pull-left
+            label(for='nameInput') Name:
+            input#nameInput(type='text')
+            br
+            label(for='gmcInput') GMC Number:
+            input#gmcInput(type='text')
+            br
+            label(for='specialtyInput') Specialty:
+            input#specialtyInput(type='text')
+
+        div.modal-footer
+          button.btn.btn-primary(type='button' onclick='f.saveUserInfo()') Show Patients
+
+  table#plist.stripe
+    thead
+      tr
+        th(style='width:18%') Number
+        th(style='width:18%') Patient ID
+        th(style='width:18%') Factors
+    tfoot
+      tr
+        th(style='width:18%') Number
+        th(style='width:18%') Patient ID
+        th(style='width:18%') Factors
+    tbody
+      each patient, id in patients
+        - c++
+        tr
+          td(style='text-align:left') #{c}
+          -if(f.results[patient.id])
+            td(style='text-align:left;background-color:green;')
+              a(href='javascript:f.loadView("'+id+'")' style='color: white') #{patient.id}
+          -else
+            td(style='text-align:left')
+              a(href='javascript:f.loadView("'+id+'")') #{patient.id}
+          td(style='text-align:left') #{Object.keys(patient.aStatus)}

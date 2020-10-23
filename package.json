@@ -1,0 +1,12 @@
+{
+  "browserify": {
+    "transform": [
+      "pugify"
+    ]
+  },
+  "dependencies": {
+    "datatables": "^1.10.18",
+    "file-saver": "^2.0.0",
+    "pug-runtime": "^2.0.4"
+  }
+}

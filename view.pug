@@ -1,0 +1,66 @@
+.container
+  h1 
+    a(href='javascript:f.loadIndex()') Back to list 
+  h1 Patient #{patient.uid}
+
+  each assertions, title in patient.fAssertions
+    h3 #{title}
+
+    p #{title} status: #{patient.aStatus[title]}
+    label Correct? 
+    input.statcheck(id=title+'::status::'+patient.aStatus[title] type="checkbox" name="correct")
+
+    table.table.clist
+      thead
+        th File
+        th Date
+        th Text
+        th(style="display:none;") Classification
+      tbody 
+        div.panel-body 
+
+          - var byDate = {};
+          each sentence, sid in patient.fAssertions[title]
+            - if(!byDate[sentence.so.date]) { byDate[sentence.so.date] = [] }
+            -console.log(sentence.so.date)
+            - byDate[sentence.so.date].push(sid)
+          - var sorted = Object.keys(byDate).sort(function(a, b) { if(Date.parse(a) > Date.parse(b)) { return -1 } else { return 1; } })
+          -console.log(byDate)
+          - console.log(sorted)
+          for date in sorted
+            - var sids = byDate[date]
+            each sid in sids
+              -var sentence = patient.fAssertions[title][sid]
+              - var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
+              - var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
+              - var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
+              tr
+                -// var fn = 'file://winad/profile/domo/Desktop/docs/'+ sentence.so.fileName.split(':')[0]
+                - //var fn = 'file://winko/profile/lksr/Desktop/docs/'+ sentence.so.fileName.split(':')[0]
+                - var fn = "../dox/"+sentence.so.fileName.split(':')[0]
+                td 
+                  a(target="_blank" href=fn) #{sentence.so.fileName}
+                td !{sentence.so.date}
+                td !{sentence.so.text}
+                td(style="display:none;")
+                  table
+                    tr
+                      td.aabox
+                        label mention 
+                      td.aabox
+                        label uncertain
+                      td.aabox
+                        label negation
+                    tr
+                      td.aabox
+                        input.echeck(id=title+'::'+sid+'::mention' type="checkbox" name="correct" checked=mChecked)
+                      td.aabox
+                        input.echeck(id=title+'::'+sid+'::uncertain' type="checkbox" name="correct" checked=uChecked)
+                      td.aabox
+                        input.echeck(id=title+'::'+sid+'::negation' type="checkbox" name="correct" checked=nChecked)
+
+  label.h5 Additional Comments
+  br
+  textarea#comments
+  br
+  button#save.submit(value='Submit' style='font-size:20px') Save and Return
