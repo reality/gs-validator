@@ -1,5 +1,5 @@
 var url = require('url'),
-    patients = require('./data/patients'),
+    patients = {},
     indexTemplate = require('./index.pug'),
     viewTemplate = require('./view.pug'),
     dataTable = require('datatables'),
