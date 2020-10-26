@@ -1,5 +1,4 @@
 var url = require('url'),
-    patients = {},
     indexTemplate = require('./index.pug'),
     listTemplate = require('./list.pug'),
     viewTemplate = require('./view.pug'),
@@ -10,6 +9,7 @@ var url = require('url'),
     userInfo = {},
     annotations = {},
     diagnoses = {},
+    iriLabels = {},
     table;
 
 $(document).ready(function() {
@@ -86,16 +86,25 @@ const loadIndex = (cb) => {
     const lines = text.split('\n');
     _.each(lines, (l) => {
       const fields = l.split('\t');
+
       const uid = fields[0].split('.')[0];
+      const iri = fields[1];
+      const label = fields[2];
+      const target = fields[3];
+      const status = fields[4];
+
       if(!_.has(diagnoses, uid)) {
-        diagnoses[uid] = [];
+        diagnoses[uid] = {};
       }
-      diagnoses[uid].push({
-        iri: fields[1],
-        label: fields[2],
-        target: fields[3],
-        status: fields[4]
-      });
+      if(!_.has(diagnoses[uid], iri)) {
+        diagnoses[uid][iri] = {};
+      }
+
+      diagnoses[uid][iri][target] = {
+        iri, label, target, status
+      };
+
+      if(!_.has(iriLabels, iri)) { iriLabels[iri] = label; }
     });
   }));
 };
@@ -135,46 +144,33 @@ const loadList = (cb) => {
 /*
  * Load a patient view
  */
-var loadView = function(pId) {
-  document.getElementById("content").innerHTML = viewTemplate({
-    patient: patients[pId]
-  });
+const loadView = (uid) => {
+  console.log(annotations[uid])
+  $('#content').html(viewTemplate({
+    uid: uid,
+    diagnoses: diagnoses[uid],
+    annotations: annotations[uid],
+    iriLabels
+  }));
+
   resetScroll();
 
   $('[data-toggle="tooltip"]').tooltip();
 
-  document.getElementById("save").onclick = function() {
-    var result = {
+  $('save').onclick = function() {
+    let result = {
       'uid': patients[pId].uid,
-      'comments': document.getElementById("comments").value,
-    //  'assertions': {},
-    //  'eassertions': {},
+      'comments': $('comments').value,
       'statcheck': {}
     };
-
-    // Patient property status 
-    /*var assertions = document.getElementsByClassName("fcheck");
-    for(var i = 0; i < assertions.length; i++) {
-      result.assertions[assertions.item(i).id] = assertions.item(i).checked;
-    }*/
 
     var sassertions = document.getElementsByClassName("statcheck");
     for(var i = 0; i < sassertions.length; i++) {
       result.statcheck[sassertions.item(i).id] = sassertions.item(i).checked;
     }
-
-    // Patient evidence status
-    /*var eassertions = document.getElementsByClassName("echeck");
-    for(var i = 0; i < eassertions.length; i++) {
-      result.eassertions[eassertions.item(i).id] = eassertions.item(i).checked;
-    }*/
-
-    results[patients[pId].uid] = result;
-    //patients[pId].done = true;
-
-    console.log(results);
-
-    loadIndex();
+  
+    results[uid] = result;
+    loadList();
   }
 }
 
