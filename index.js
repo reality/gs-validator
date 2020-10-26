@@ -113,9 +113,11 @@ const loadList = (cb) => {
   var u = url.parse(window.location.href, true).query;
 
   $('#content').html(listTemplate({ diagnoses }));
-  $('#save').onclick = function() { // TODO we need to change this to the tsv with extras
-    saveText(JSON.stringify({ 'results': results }), "results.json");
-  };
+  $('#save').bind('click', () => {
+    saveText(JSON.stringify({ 
+      diagnoses, annotations, results, userInfo
+    }), 'results.json');
+  });
 
   $('#plist tfoot th').each(function() {
     var title = $(this).text();
@@ -145,9 +147,8 @@ const loadList = (cb) => {
  * Load a patient view
  */
 const loadView = (uid) => {
-  console.log(annotations[uid])
   $('#content').html(viewTemplate({
-    uid: uid,
+    uid,
     diagnoses: diagnoses[uid],
     annotations: annotations[uid],
     iriLabels
@@ -155,12 +156,22 @@ const loadView = (uid) => {
 
   resetScroll();
 
-  $('[data-toggle="tooltip"]').tooltip();
+  console.log(results);
+  if(_.has(results, uid)) {
+    const r = results[uid];
+    $('#comments').text(r.comments);
+    
+    var sassertions = document.getElementsByClassName("statcheck");
+    for(var i = 0; i < sassertions.length; i++) {
+      sassertions.item(i).checked = r.statcheck[sassertions.item(i).id];
+    }
+  }
 
-  $('save').onclick = function() {
+  $('[data-toggle="tooltip"]').tooltip();
+  $('#save').bind('click', () => {
     let result = {
-      'uid': patients[pId].uid,
-      'comments': $('comments').value,
+      'uid': uid,
+      'comments': $('#comments').val(),
       'statcheck': {}
     };
 
@@ -171,7 +182,7 @@ const loadView = (uid) => {
   
     results[uid] = result;
     loadList();
-  }
+  });
 }
 
 /**
