@@ -1,26 +1,28 @@
 .container  
   - var c = 0;
   h1 Patients List
-  button#save.submit(value='Submit' style='font-size:20px') Save Results
-  div#infoModal.modal.fade(tabindex='-1' role='dialog' aria-labelledby='#finaliseModalLabel' aria-hidden='true')
+  div#infoModal.modal(tabindex='-1' role='dialog' aria-labelledby='#finaliseModalLabel' aria-hidden='true')
     div.modal-dialog(role='document')
       div.modal-content
         div.modal-header
-          h5#infoModalLabel.modal-title Validator Details
+          h3#infoModalLabel.modal-title Validator Details
 
         div.modal-body
-          div.form-group.form-control-static.pull-left
+          div.form-group.form-control-static
             label(for='nameInput') Name:
             input#nameInput(type='text')
-            br
+          div.form-group.form-control-static
             label(for='gmcInput') GMC Number:
             input#gmcInput(type='text')
-            br
+          div.form-group.form-control-static
             label(for='specialtyInput') Specialty:
             input#specialtyInput(type='text')
-            br
-            label(for='resultsFileInput') Select results file:
-            input#reusltsFileInput(type='file')
+          div.form-group.form-control-static
+            label(for='resultsFileInput') Select Komenti annotations file:
+            input#annFileInput(type='file')
+          div.form-group.form-control-static
+            label(for='resultsFileInput') Select Komenti diagnosis file (if you saved your progress, you can also load your saved file here):
+            input#diaFileInput(type='file')
 
-        div.modal-footer
-          button.btn.btn-primary(type='button' onclick='f.saveUserInfo()') Show Patients
+        div.modal-footer.center
+          button.btn.btn-primary(type='button' onclick='f.saveUserInfo()') Load Patients

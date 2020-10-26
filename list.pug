@@ -1,0 +1,27 @@
+.container  
+  - var c = 0;
+  h1 Patients List
+  button#save.submit(value='Submit' style='font-size:20px') Save Results
+  table#plist.stripe
+    thead
+      tr
+        th(style='width:18%') Number
+        th(style='width:18%') UID
+        th(style='width:18%') Factors
+    tfoot
+      tr
+        th(style='width:18%') Number
+        th(style='width:18%') UID
+        th(style='width:18%') Factors
+    tbody
+      each entries, uid in diagnoses
+        - c++
+        tr
+          td(style='text-align:left') #{c}
+          -if(f.results[uid])
+            td(style='text-align:left;background-color:green;')
+              a(href='javascript:f.loadView("'+id+'")' style='color: white') #{uid}
+          -else
+            td(style='text-align:left')
+              a(href='javascript:f.loadView("'+uid+'")') #{uid}
+          td(style='text-align:left') unfinished
