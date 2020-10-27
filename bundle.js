@@ -174,7 +174,7 @@ const loadList = (cb) => {
     }
   })
 
-  $('#content').html(listTemplate({ diagnoses, results, perf }));
+  $('#content').html(listTemplate({ diagnoses, results, perf, groupMode }));
 
   $('#save').bind('click', () => {
     saveText(JSON.stringify({ 
@@ -389,7 +389,7 @@ module.exports=template;function pug_attr(t,e,n,r){if(!1===e||null==e||!e&&("cla
 function pug_escape(e){var a=""+e,t=pug_match_html.exec(a);if(!t)return e;var r,c,n,s="";for(r=t.index,c=0;r<a.length;r++){switch(a.charCodeAt(r)){case 34:n="&quot;";break;case 38:n="&amp;";break;case 60:n="&lt;";break;case 62:n="&gt;";break;default:continue}c!==r&&(s+=a.substring(c,r)),c=r+1,s+=n}return c!==r?s+a.substring(c,r):s}
 var pug_match_html=/["&<>]/;
 function pug_rethrow(n,e,r,t){if(!(n instanceof Error))throw n;if(!("undefined"==typeof window&&e||t))throw n.message+=" on line "+r,n;try{t=t||require("fs").readFileSync(e,"utf8")}catch(e){pug_rethrow(n,null,r)}var i=3,a=t.split("\n"),o=Math.max(r-i,0),h=Math.min(a.length,r+i),i=a.slice(o,h).map(function(n,e){var t=e+o+1;return(t==r?"  > ":"    ")+t+"| "+n}).join("\n");throw n.path=e,n.message=(e||"Pug")+":"+r+"\n"+i+"\n\n"+n.message,n}function template(locals) {var pug_html = "", pug_mixins = {}, pug_interp;
-;var locals_for_with = (locals || {});(function (diagnoses, perf, results) {var pug_indent = [];
+;var locals_for_with = (locals || {});(function (diagnoses, groupMode, perf, results) {var pug_indent = [];
 
 pug_html = pug_html + "\n\u003Cdiv class=\"container\"\u003E";
 
@@ -601,7 +601,14 @@ var factors = []
 
 if (iri.self) {
 
+if (groupMode) {
+
+factors.push(iri.self.group)
+}
+else {
+
 factors.push(iri.self.label)
+}
 }
       }
   } else {
@@ -612,7 +619,14 @@ factors.push(iri.self.label)
 
 if (iri.self) {
 
+if (groupMode) {
+
+factors.push(iri.self.group)
+}
+else {
+
 factors.push(iri.self.label)
+}
 }
     }
   }
@@ -667,7 +681,14 @@ var factors = []
 
 if (iri.self) {
 
+if (groupMode) {
+
+factors.push(iri.self.group)
+}
+else {
+
 factors.push(iri.self.label)
+}
 }
       }
   } else {
@@ -678,7 +699,14 @@ factors.push(iri.self.label)
 
 if (iri.self) {
 
+if (groupMode) {
+
+factors.push(iri.self.group)
+}
+else {
+
 factors.push(iri.self.label)
+}
 }
     }
   }
@@ -717,7 +745,7 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = factors.join(', ')) ? ""
   }
 }).call(this);
 
-pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"diagnoses" in locals_for_with?locals_for_with.diagnoses:typeof diagnoses!=="undefined"?diagnoses:undefined,"perf" in locals_for_with?locals_for_with.perf:typeof perf!=="undefined"?perf:undefined,"results" in locals_for_with?locals_for_with.results:typeof results!=="undefined"?results:undefined));return pug_html;}
+pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"diagnoses" in locals_for_with?locals_for_with.diagnoses:typeof diagnoses!=="undefined"?diagnoses:undefined,"groupMode" in locals_for_with?locals_for_with.groupMode:typeof groupMode!=="undefined"?groupMode:undefined,"perf" in locals_for_with?locals_for_with.perf:typeof perf!=="undefined"?perf:undefined,"results" in locals_for_with?locals_for_with.results:typeof results!=="undefined"?results:undefined));return pug_html;}
 
 },{"fs":10,"pug-runtime":8}],4:[function(require,module,exports){
 /*! DataTables 1.10.18
@@ -44351,9 +44379,18 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp))
       for (var iri = 0, $$l = $$obj.length; iri < $$l; iri++) {
         var targets = $$obj[iri];
 
+if (groupMode) {
+
+pug_html = pug_html + "\n  \u003Ch3\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = iri) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
+}
+else {
+
 pug_html = pug_html + "\n  \u003Ch3\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = iriLabels[iri]) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
+}
 
 // iterate ts
 ;(function(){
@@ -44800,9 +44837,18 @@ pug_html = pug_html + "\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Ftbody\u003
       $$l++;
       var targets = $$obj[iri];
 
+if (groupMode) {
+
+pug_html = pug_html + "\n  \u003Ch3\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = iri) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
+}
+else {
+
 pug_html = pug_html + "\n  \u003Ch3\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = iriLabels[iri]) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
+}
 
 // iterate ts
 ;(function(){

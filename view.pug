@@ -5,7 +5,10 @@
   h1 Text-mined entities for #{uid}
 
   each targets, iri in diagnoses
-    h3 #{iriLabels[iri]}
+    if groupMode
+      h3 #{iri}
+    else
+      h3 #{iriLabels[iri]}
 
     each t in ts
       if targets[t] 

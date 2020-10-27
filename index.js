@@ -173,7 +173,7 @@ const loadList = (cb) => {
     }
   })
 
-  $('#content').html(listTemplate({ diagnoses, results, perf }));
+  $('#content').html(listTemplate({ diagnoses, results, perf, groupMode }));
 
   $('#save').bind('click', () => {
     saveText(JSON.stringify({ 
