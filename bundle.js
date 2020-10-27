@@ -595,7 +595,10 @@ var factors = []
       for (var pug_index1 = 0, $$l = $$obj.length; pug_index1 < $$l; pug_index1++) {
         var iri = $$obj[pug_index1];
 
+if (iri.self) {
+
 factors.push(iri.self.label)
+}
       }
   } else {
     var $$l = 0;
@@ -603,7 +606,10 @@ factors.push(iri.self.label)
       $$l++;
       var iri = $$obj[pug_index1];
 
+if (iri.self) {
+
 factors.push(iri.self.label)
+}
     }
   }
 }).call(this);
@@ -655,7 +661,10 @@ var factors = []
       for (var pug_index2 = 0, $$l = $$obj.length; pug_index2 < $$l; pug_index2++) {
         var iri = $$obj[pug_index2];
 
+if (iri.self) {
+
 factors.push(iri.self.label)
+}
       }
   } else {
     var $$l = 0;
@@ -663,7 +672,10 @@ factors.push(iri.self.label)
       $$l++;
       var iri = $$obj[pug_index2];
 
+if (iri.self) {
+
 factors.push(iri.self.label)
+}
     }
   }
 }).call(this);
