@@ -371,7 +371,13 @@ pug_html = pug_html + "\n              \u003Cinput id=\"progressFileInput\" type
 
 pug_html = pug_html + "\n            \u003Cbutton class=\"btn btn-primary\" id=\"loadBtn\" type=\"button\"\u003E";
 
-pug_html = pug_html + "Load Results\u003C\u002Fbutton\u003E\n          \u003C\u002Fdiv\u003E\n        \u003C\u002Fdiv\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E\n\u003C\u002Fdiv\u003E";return pug_html;}
+pug_html = pug_html + "Load Results\u003C\u002Fbutton\u003E\n          \u003C\u002Fdiv\u003E\n        \u003C\u002Fdiv\u003E";
+
+pug_html = pug_html + "\n        \u003Cdiv class=\"modal-footer\"\u003E";
+
+pug_html = pug_html + "\n          \u003Cp\u003E";
+
+pug_html = pug_html + "Version: 0.2.0\u003C\u002Fp\u003E\n        \u003C\u002Fdiv\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E\n\u003C\u002Fdiv\u003E";return pug_html;}
 
 },{"fs":10,"pug-runtime":8}],3:[function(require,module,exports){
 var pug = require('pug-runtime');

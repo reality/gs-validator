@@ -47,7 +47,8 @@
         - c++
         - var factors = []
         each iri in entries
-          - factors.push(iri.self.label)
+          if iri.self
+            - factors.push(iri.self.label)
         tr
           td(style='text-align:left') #{c}
           -if(results[uid])
