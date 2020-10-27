@@ -1,7 +1,36 @@
 .container  
+  div#perfModal.modal(tabindex='-1' role='dialog' aria-labelledby='#finaliseModalLabel' aria-hidden='true')
+    div.modal-dialog(role='document')
+      div.modal-content
+        div.modal-body
+          h3#perfModalLabel.modal-title Performance
+
+          h4 Overall 
+          p TP: #{perf.overall.tp}, FP: #{perf.overall.fp}, FN: #{perf.overall.fn}
+          p Precision: #{perf.overall.precision}
+          p Recall: #{perf.overall.recall}
+
+          h4 Affirmed
+          p TP: #{perf.affirmed.tp}, FP: #{perf.affirmed.fp}, FN: #{perf.affirmed.fn}
+          p Precision: #{perf.affirmed.precision}
+          p Recall: #{perf.affirmed.recall}
+
+          h4 Uncertain
+          p TP: #{perf.uncertain.tp}, FP: #{perf.uncertain.fp}, FN: #{perf.uncertain.fn}
+          p Precision: #{perf.uncertain.precision}
+          p Recall: #{perf.uncertain.recall}
+
+          h4 Negated
+          p TP: #{perf.negated.tp}, FP: #{perf.negated.fp}, FN: #{perf.negated.fn}
+          p Precision: #{perf.negated.precision}
+          p Recall: #{perf.negated.recall}
+
+
   - var c = 0;
-  h1 Patients List
+  h1 Medotate
   button#save.submit(value='Submit' style='font-size:20px') Save Results
+  button#performance(value='View' style='font-size:20px') View Performance
+  h3 Patients
   table#plist.stripe
     thead
       tr
@@ -18,7 +47,7 @@
         - c++
         tr
           td(style='text-align:left') #{c}
-          -if(f.results[uid])
+          -if(results[uid])
             td(style='text-align:left;background-color:green;')
               a(href='javascript:f.loadView("'+uid+'")' style='color: white') #{uid}
           -else

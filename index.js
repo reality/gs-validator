@@ -24,19 +24,7 @@ $(document).ready(function() {
 var showInfoPopup = function() {
   $("#infoModal").modal();
 };
-
-const saveUserInfo = () => {
-  userInfo = {
-    'name': $("#nameInput").val(),
-    'gmc': $("#gmcInput").val(),
-    'specialty': $("#specialtyInput").val()
-  };
-  
-  $("#infoModal").modal('hide')
-
-  loadList();
-};
-
+ 
 let readFileFactory = (cb) => {
   return (event) => {
     const ourFile = event.target.files[0];
@@ -65,11 +53,37 @@ const loadIndex = (cb) => {
   // Interesting, needs to be function rather than closure syntax because it uses their scope!
   $('.cbtn').click(function() {
     $('.content-section').hide() ;
-    console.log($(this).attr('data-section'))
     $("#" + $(this).attr("data-section")).show();
   });
 
-  // TODO should remove the file reading boilerplate here really
+  $('#newBtn').click(() => {
+    userInfo = {
+      'name': $("#nameInput").val(),
+      'gmc': $("#gmcInput").val(),
+      'specialty': $("#specialtyInput").val()
+    };
+    
+    $("#infoModal").modal('hide');
+    loadList();
+  });
+
+  $('#loadBtn').click(() => {
+    // TODO check that we've actually loaded the stuff. not that it will work if not lmao
+    $("#infoModal").modal('hide')
+    loadList();
+  })
+
+  $('#progressFileInput').bind('change', readFileFactory((text) => {
+    const lResults = JSON.parse(text); // TODO error checking
+
+    // TODO we should also probably just store them in a single object here. unnecessary to decompose them like this
+    diagnoses = lResults.diagnoses;
+    annotations = lResults.annotations;
+    results = lResults.results;
+    userInfo = lResults.userInfo;
+  }));
+
+  // TODO should consolidate the file reading boilerplate here really
   $('#annFileInput').bind('change', readFileFactory((text) => {
     const lines = text.split('\n');
     _.each(lines, (l) => {
@@ -119,12 +133,53 @@ const loadIndex = (cb) => {
 const loadList = (cb) => {
   var u = url.parse(window.location.href, true).query;
 
-  $('#content').html(listTemplate({ diagnoses }));
+  // Calculate current precision
+  // TODO add: FN
+  const perf = {
+    overall: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' },
+    affirmed: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' },
+    negated: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' },
+    uncertain: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' }
+  }
+  _.each(results, (entity) => {
+    _.each(entity.statcheck, (entry, id) => {
+      if(entry.value) { 
+        perf.overall.tp++; 
+
+        const cl = id.split('::')[3];
+        perf[cl].tp++;
+
+      } else { 
+        perf.overall.fp++; 
+
+        const cl = id.split('::')[3];
+        perf[cl].fp++;
+
+        perf[entry.correction].fn++;
+
+        perf.overall.fn++;
+      } 
+    })
+  });
+  _.each(perf, (val, cat) => {  
+    if(val.tp+val.fp > 0) {
+      val.precision = val.tp / (val.tp + val.fp)
+    }
+    if(val.tp+val.fn > 0) {
+      val.recall = val.tp / (val.tp + val.fn)
+    }
+  })
+
+  $('#content').html(listTemplate({ diagnoses, results, perf }));
+
   $('#save').bind('click', () => {
     saveText(JSON.stringify({ 
       diagnoses, annotations, results, userInfo
     }), 'results.json');
   });
+  $('#performance').bind('click', () => {
+    $("#perfModal").modal();
+  })
 
   $('#plist tfoot th').each(function() {
     var title = $(this).text();
@@ -163,16 +218,21 @@ const loadView = (uid) => {
 
   resetScroll();
 
-  console.log(results);
   if(_.has(results, uid)) {
     const r = results[uid];
     $('#comments').text(r.comments);
     
     var sassertions = document.getElementsByClassName("statcheck");
     for(var i = 0; i < sassertions.length; i++) {
-      sassertions.item(i).checked = r.statcheck[sassertions.item(i).id];
+      sassertions.item(i).checked = r.statcheck[sassertions.item(i).id].value;
+      document.getElementById(sassertions.item(i).id+'::correction').disabled = r.statcheck[sassertions.item(i).id].value;
+      document.getElementById(sassertions.item(i).id+'::correction').value = r.statcheck[sassertions.item(i).id].correction;
     }
   }
+
+  $('.statcheck').click(function() {
+    document.getElementById(this.id+'::correction').disabled = this.checked;
+  });
 
   $('[data-toggle="tooltip"]').tooltip();
   $('#save').bind('click', () => {
@@ -184,7 +244,10 @@ const loadView = (uid) => {
 
     var sassertions = document.getElementsByClassName("statcheck");
     for(var i = 0; i < sassertions.length; i++) {
-      result.statcheck[sassertions.item(i).id] = sassertions.item(i).checked;
+      result.statcheck[sassertions.item(i).id] = {
+        value: sassertions.item(i).checked,
+        correction: document.getElementById(sassertions.item(i).id+'::correction').value
+      };
     }
   
     results[uid] = result;
@@ -204,5 +267,4 @@ function resetScroll() {
   document.body.scrollTop = document.documentElement.scrollTop = 0;
 }
 
-module.exports = { 'loadView': loadView, 'saveUserInfo': saveUserInfo, 'loadIndex': loadIndex, 'loadList': loadList, 'results': results };
-
+module.exports = { 'loadView': loadView, 'loadIndex': loadIndex, 'loadList': loadList };

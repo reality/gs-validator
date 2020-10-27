@@ -1,7 +1,7 @@
 .container
   - var ts = ['self', 'family'];
   h1 
-    a(href='javascript:f.loadIndex()') Back to list 
+    a(href='javascript:f.loadList()') Back to list 
   h1 Text-mined entities for #{uid}
 
   each targets, iri in diagnoses
@@ -13,7 +13,12 @@
 
         p #{t} status: #{a.status}
         label Correct? 
-        input.statcheck(id=uid+'::'+a.iri+'::'+a.target type="checkbox" name="correct")
+        input.statcheck(id=uid+'::'+a.iri+'::'+a.target+'::'+a.status type="checkbox" name="correct")
+        label Should be:
+        select.shouldbe(id=uid+'::'+a.iri+'::'+a.target+'::'+a.status+'::correction')
+          option(value='affirmed') Affirmed
+          option(value='uncertain') Uncertain
+          option(value='negated') Negated
 
         table.table.clist
           thead
