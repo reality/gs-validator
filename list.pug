@@ -49,7 +49,7 @@
         each iri in entries
           if iri.self
             if groupMode
-              - factors.push(iri.self.group)
+              - factors.push(iri.self.iri)
             else 
               - factors.push(iri.self.label)
         tr

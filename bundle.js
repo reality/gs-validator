@@ -94,15 +94,17 @@ const loadIndex = (cb) => {
       if(!_.has(annotations, uid)) {
         annotations[uid] = [];
       }
-      annotations[uid].push({
-        iri: fields[1],
-        label: fields[2],
-        matchedText: fields[3],
-        group: fields[4],
-        tags: fields[5],
-        sid: fields[6],
-        sentence: fields[7]
-      });
+      if(!_.find(annotations[uid], (ann) => { ann.sentence == fields[7] })) { // remove annoying duplicates
+        annotations[uid].push({
+          iri: fields[1],
+          label: fields[2],
+          matchedText: fields[3],
+          group: fields[4],
+          tags: fields[5],
+          sid: fields[6],
+          sentence: fields[7]
+        });
+      }
     });
   }));
   $('#diaFileInput').bind('change', readFileFactory((text) => {
@@ -603,7 +605,7 @@ if (iri.self) {
 
 if (groupMode) {
 
-factors.push(iri.self.group)
+factors.push(iri.self.iri)
 }
 else {
 
@@ -621,7 +623,7 @@ if (iri.self) {
 
 if (groupMode) {
 
-factors.push(iri.self.group)
+factors.push(iri.self.iri)
 }
 else {
 
@@ -683,7 +685,7 @@ if (iri.self) {
 
 if (groupMode) {
 
-factors.push(iri.self.group)
+factors.push(iri.self.iri)
 }
 else {
 
@@ -701,7 +703,7 @@ if (iri.self) {
 
 if (groupMode) {
 
-factors.push(iri.self.group)
+factors.push(iri.self.iri)
 }
 else {
 
