@@ -10,7 +10,8 @@ var url = require('url'),
     annotations = {},
     diagnoses = {},
     iriLabels = {},
-    table;
+    table,
+    groupMode = false;
 
 $(document).ready(function() {
   loadIndex();
@@ -125,6 +126,8 @@ const loadIndex = (cb) => {
         iri, label, target, status
       };
 
+      if(label == 'null') { groupMode = true; }
+
       if(!_.has(iriLabels, iri)) { iriLabels[iri] = label; }
     });
   }));
@@ -213,7 +216,8 @@ const loadView = (uid) => {
     uid,
     diagnoses: diagnoses[uid],
     annotations: annotations[uid],
-    iriLabels
+    iriLabels,
+    groupMode
   }));
 
   resetScroll();

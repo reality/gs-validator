@@ -29,31 +29,32 @@
           tbody 
             div.panel-body 
               each ann in annotations
-                if ann.iri == a.iri && ((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))
-                  - //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
-                  - //var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
-                  - //var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
-                  tr
-                    td #{ann.sid}
-                    td !{ann.sentence}
-                    td #{ann.tags}
+                if (groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)
+                  if((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))
+                    - //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
+                    - //var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
+                    - //var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
+                    tr
+                      td #{ann.sid}
+                      td !{ann.sentence}
+                      td #{ann.tags}
 
-                    td(style="display:none;")
-                      table
-                        tr
-                          td.aabox
-                            label mention 
-                          td.aabox
-                            label uncertain
-                          td.aabox
-                            label negation
-                        tr
-                          td.aabox
-                            input.echeck(id=title+'::'+sid+'::mention' type="checkbox" name="correct" checked=mChecked)
-                          td.aabox
-                            input.echeck(id=title+'::'+sid+'::uncertain' type="checkbox" name="correct" checked=uChecked)
-                          td.aabox
-                            input.echeck(id=title+'::'+sid+'::negation' type="checkbox" name="correct" checked=nChecked)
+                      td(style="display:none;")
+                        table
+                          tr
+                            td.aabox
+                              label mention 
+                            td.aabox
+                              label uncertain
+                            td.aabox
+                              label negation
+                          tr
+                            td.aabox
+                              input.echeck(id=title+'::'+sid+'::mention' type="checkbox" name="correct" checked=mChecked)
+                            td.aabox
+                              input.echeck(id=title+'::'+sid+'::uncertain' type="checkbox" name="correct" checked=uChecked)
+                            td.aabox
+                              input.echeck(id=title+'::'+sid+'::negation' type="checkbox" name="correct" checked=nChecked)
 
 
   label.h5 Additional Comments

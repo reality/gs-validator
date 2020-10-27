@@ -11,7 +11,8 @@ var url = require('url'),
     annotations = {},
     diagnoses = {},
     iriLabels = {},
-    table;
+    table,
+    groupMode = false;
 
 $(document).ready(function() {
   loadIndex();
@@ -126,6 +127,8 @@ const loadIndex = (cb) => {
         iri, label, target, status
       };
 
+      if(label == 'null') { groupMode = true; }
+
       if(!_.has(iriLabels, iri)) { iriLabels[iri] = label; }
     });
   }));
@@ -214,7 +217,8 @@ const loadView = (uid) => {
     uid,
     diagnoses: diagnoses[uid],
     annotations: annotations[uid],
-    iriLabels
+    iriLabels,
+    groupMode
   }));
 
   resetScroll();
@@ -44320,7 +44324,7 @@ module.exports=template;function pug_attr(t,e,n,r){if(!1===e||null==e||!e&&("cla
 function pug_escape(e){var a=""+e,t=pug_match_html.exec(a);if(!t)return e;var r,c,n,s="";for(r=t.index,c=0;r<a.length;r++){switch(a.charCodeAt(r)){case 34:n="&quot;";break;case 38:n="&amp;";break;case 60:n="&lt;";break;case 62:n="&gt;";break;default:continue}c!==r&&(s+=a.substring(c,r)),c=r+1,s+=n}return c!==r?s+a.substring(c,r):s}
 var pug_match_html=/["&<>]/;
 function pug_rethrow(n,e,r,t){if(!(n instanceof Error))throw n;if(!("undefined"==typeof window&&e||t))throw n.message+=" on line "+r,n;try{t=t||require("fs").readFileSync(e,"utf8")}catch(e){pug_rethrow(n,null,r)}var i=3,a=t.split("\n"),o=Math.max(r-i,0),h=Math.min(a.length,r+i),i=a.slice(o,h).map(function(n,e){var t=e+o+1;return(t==r?"  > ":"    ")+t+"| "+n}).join("\n");throw n.path=e,n.message=(e||"Pug")+":"+r+"\n"+i+"\n\n"+n.message,n}function template(locals) {var pug_html = "", pug_mixins = {}, pug_interp;
-;var locals_for_with = (locals || {});(function (annotations, diagnoses, iriLabels, mChecked, nChecked, sid, title, uChecked, uid) {var pug_indent = [];
+;var locals_for_with = (locals || {});(function (annotations, diagnoses, groupMode, iriLabels, mChecked, nChecked, sid, title, uChecked, uid) {var pug_indent = [];
 
 pug_html = pug_html + "\n\u003Cdiv class=\"container\"\u003E";
 
@@ -44429,7 +44433,9 @@ pug_html = pug_html + " ";
       for (var pug_index2 = 0, $$l = $$obj.length; pug_index2 < $$l; pug_index2++) {
         var ann = $$obj[pug_index2];
 
-if (ann.iri == a.iri && ((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
+if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+
+if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
 
 //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
 
@@ -44489,6 +44495,7 @@ pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
 
 pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
 }
+}
       }
   } else {
     var $$l = 0;
@@ -44496,7 +44503,9 @@ pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+p
       $$l++;
       var ann = $$obj[pug_index2];
 
-if (ann.iri == a.iri && ((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
+if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+
+if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
 
 //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
 
@@ -44555,6 +44564,7 @@ pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+p
 pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
 
 pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
+}
 }
     }
   }
@@ -44640,7 +44650,9 @@ pug_html = pug_html + " ";
       for (var pug_index3 = 0, $$l = $$obj.length; pug_index3 < $$l; pug_index3++) {
         var ann = $$obj[pug_index3];
 
-if (ann.iri == a.iri && ((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
+if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+
+if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
 
 //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
 
@@ -44700,6 +44712,7 @@ pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
 
 pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
 }
+}
       }
   } else {
     var $$l = 0;
@@ -44707,7 +44720,9 @@ pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+p
       $$l++;
       var ann = $$obj[pug_index3];
 
-if (ann.iri == a.iri && ((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
+if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+
+if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
 
 //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
 
@@ -44766,6 +44781,7 @@ pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+p
 pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
 
 pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
+}
 }
     }
   }
@@ -44866,7 +44882,9 @@ pug_html = pug_html + " ";
       for (var pug_index5 = 0, $$l = $$obj.length; pug_index5 < $$l; pug_index5++) {
         var ann = $$obj[pug_index5];
 
-if (ann.iri == a.iri && ((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
+if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+
+if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
 
 //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
 
@@ -44926,6 +44944,7 @@ pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
 
 pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
 }
+}
       }
   } else {
     var $$l = 0;
@@ -44933,7 +44952,9 @@ pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+p
       $$l++;
       var ann = $$obj[pug_index5];
 
-if (ann.iri == a.iri && ((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
+if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+
+if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
 
 //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
 
@@ -44992,6 +45013,7 @@ pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+p
 pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
 
 pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
+}
 }
     }
   }
@@ -45077,7 +45099,9 @@ pug_html = pug_html + " ";
       for (var pug_index6 = 0, $$l = $$obj.length; pug_index6 < $$l; pug_index6++) {
         var ann = $$obj[pug_index6];
 
-if (ann.iri == a.iri && ((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
+if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+
+if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
 
 //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
 
@@ -45137,6 +45161,7 @@ pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
 
 pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
 }
+}
       }
   } else {
     var $$l = 0;
@@ -45144,7 +45169,9 @@ pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+p
       $$l++;
       var ann = $$obj[pug_index6];
 
-if (ann.iri == a.iri && ((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
+if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+
+if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
 
 //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
 
@@ -45203,6 +45230,7 @@ pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+p
 pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
 
 pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
+}
 }
     }
   }
@@ -45231,7 +45259,7 @@ pug_html = pug_html + "\u003Cbr\u002F\u003E";
 
 pug_html = pug_html + "\n  \u003Cbutton class=\"submit\" id=\"save\" value=\"Submit\" style=\"font-size:20px\"\u003E";
 
-pug_html = pug_html + "Save and Return\u003C\u002Fbutton\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"annotations" in locals_for_with?locals_for_with.annotations:typeof annotations!=="undefined"?annotations:undefined,"diagnoses" in locals_for_with?locals_for_with.diagnoses:typeof diagnoses!=="undefined"?diagnoses:undefined,"iriLabels" in locals_for_with?locals_for_with.iriLabels:typeof iriLabels!=="undefined"?iriLabels:undefined,"mChecked" in locals_for_with?locals_for_with.mChecked:typeof mChecked!=="undefined"?mChecked:undefined,"nChecked" in locals_for_with?locals_for_with.nChecked:typeof nChecked!=="undefined"?nChecked:undefined,"sid" in locals_for_with?locals_for_with.sid:typeof sid!=="undefined"?sid:undefined,"title" in locals_for_with?locals_for_with.title:typeof title!=="undefined"?title:undefined,"uChecked" in locals_for_with?locals_for_with.uChecked:typeof uChecked!=="undefined"?uChecked:undefined,"uid" in locals_for_with?locals_for_with.uid:typeof uid!=="undefined"?uid:undefined));return pug_html;}
+pug_html = pug_html + "Save and Return\u003C\u002Fbutton\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"annotations" in locals_for_with?locals_for_with.annotations:typeof annotations!=="undefined"?annotations:undefined,"diagnoses" in locals_for_with?locals_for_with.diagnoses:typeof diagnoses!=="undefined"?diagnoses:undefined,"groupMode" in locals_for_with?locals_for_with.groupMode:typeof groupMode!=="undefined"?groupMode:undefined,"iriLabels" in locals_for_with?locals_for_with.iriLabels:typeof iriLabels!=="undefined"?iriLabels:undefined,"mChecked" in locals_for_with?locals_for_with.mChecked:typeof mChecked!=="undefined"?mChecked:undefined,"nChecked" in locals_for_with?locals_for_with.nChecked:typeof nChecked!=="undefined"?nChecked:undefined,"sid" in locals_for_with?locals_for_with.sid:typeof sid!=="undefined"?sid:undefined,"title" in locals_for_with?locals_for_with.title:typeof title!=="undefined"?title:undefined,"uChecked" in locals_for_with?locals_for_with.uChecked:typeof uChecked!=="undefined"?uChecked:undefined,"uid" in locals_for_with?locals_for_with.uid:typeof uid!=="undefined"?uid:undefined));return pug_html;}
 
 },{"fs":10,"pug-runtime":8}],10:[function(require,module,exports){
 
