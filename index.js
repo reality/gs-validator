@@ -62,6 +62,13 @@ const loadIndex = (cb) => {
   $("#content").html(indexTemplate({}));
   showInfoPopup();
 
+  // Interesting, needs to be function rather than closure syntax because it uses their scope!
+  $('.cbtn').click(function() {
+    $('.content-section').hide() ;
+    console.log($(this).attr('data-section'))
+    $("#" + $(this).attr("data-section")).show();
+  });
+
   // TODO should remove the file reading boilerplate here really
   $('#annFileInput').bind('change', readFileFactory((text) => {
     const lines = text.split('\n');
