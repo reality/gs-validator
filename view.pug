@@ -28,6 +28,8 @@
                     option(value=' ')
                     each r in q.responses
                       option(value=r) #{r}
+                if q.responses.includes('[INPUT]')
+                  input(id=q.id+'::txt')
 
   label.h5 Additional Comments
   br

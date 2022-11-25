@@ -151,6 +151,9 @@ const refreshDisabled = () => {
     }
 
     $(this).prop('disabled', disabled);
+    if(disabled) {
+      $(this).prop('selectedIndex', "0");
+    }
   });
 
   $('tr').each(function() {

@@ -152,6 +152,9 @@ const refreshDisabled = () => {
     }
 
     $(this).prop('disabled', disabled);
+    if(disabled) {
+      $(this).prop('selectedIndex', "0");
+    }
   });
 
   $('tr').each(function() {
@@ -44168,7 +44171,10 @@ module.exports={
           {
             "id": "sm1.0",
             "question": "Does this letter mention family history of HCM?",
-            "responses": [ "yes", "no", "not sure" ]
+            "responses": [ "yes", "no", "not sure" ],
+            "askif": [
+              { "id": "hcm0.0", "response": [ "yes" ] }
+            ]
           }, 
           {
             "id": "sm1.1",
@@ -44214,7 +44220,10 @@ module.exports={
           {
             "id": "sm2.0",
             "question": "Does this letter mention family history of sudden cardiac death?",
-            "responses": [ "yes", "no", "not sure" ]
+            "responses": [ "yes", "no", "not sure" ],
+            "askif": [
+              { "id": "hcm0.0", "response": [ "yes" ] }
+            ]
           },
           {
             "id": "sm2.1",
@@ -44228,7 +44237,10 @@ module.exports={
           {
             "id": "sm3.0",
             "question": "Does this letter mention the patient's genetic status?",
-            "responses": [ "yes", "no", "not sure" ]
+            "responses": [ "yes", "no", "not sure" ],
+            "askif": [
+              { "id": "hcm0.0", "response": [ "yes" ] }
+            ]
           },
           {
             "id": "sm3.1",
@@ -44602,6 +44614,11 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
 }
+
+if (q.responses.includes('[INPUT]')) {
+
+pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+}
 pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
       }
   } else {
@@ -44687,6 +44704,11 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 }).call(this);
 
 pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+
+if (q.responses.includes('[INPUT]')) {
+
+pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
 pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
     }
@@ -44792,6 +44814,11 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
 }
+
+if (q.responses.includes('[INPUT]')) {
+
+pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+}
 pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
       }
   } else {
@@ -44877,6 +44904,11 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 }).call(this);
 
 pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+
+if (q.responses.includes('[INPUT]')) {
+
+pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
 pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
     }
@@ -44997,6 +45029,11 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
 }
+
+if (q.responses.includes('[INPUT]')) {
+
+pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+}
 pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
       }
   } else {
@@ -45082,6 +45119,11 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 }).call(this);
 
 pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+
+if (q.responses.includes('[INPUT]')) {
+
+pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
 pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
     }
@@ -45187,6 +45229,11 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
 }
+
+if (q.responses.includes('[INPUT]')) {
+
+pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+}
 pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
       }
   } else {
@@ -45272,6 +45319,11 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 }).call(this);
 
 pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+
+if (q.responses.includes('[INPUT]')) {
+
+pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
 pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
     }
