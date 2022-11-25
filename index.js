@@ -5,13 +5,21 @@ var url = require('url'),
     dataTable = require('datatables'),
     FileSaver = require('file-saver'),
     _ = require('lodash')._,
+    sample = {},
     results = {},
-    userInfo = {},
-    annotations = {},
-    diagnoses = {},
-    iriLabels = {},
+    questions = require('./questions.json'),
+    qMap = {},
     table,
     groupMode = false;
+
+_.each(questions.groups, (groups) => {
+  _.each(groups.questions, (g) => {
+    _.each(g, (q) => {
+        console.log(q.id)
+        qMap[q.id] = q;
+    })
+  })
+});
 
 $(document).ready(function() {
   loadIndex();
@@ -75,116 +83,20 @@ const loadIndex = (cb) => {
   })
 
   $('#progressFileInput').bind('change', readFileFactory((text) => {
-    const lResults = JSON.parse(text); // TODO error checking
-
-    // TODO we should also probably just store them in a single object here. unnecessary to decompose them like this
-    diagnoses = lResults.diagnoses;
-    annotations = lResults.annotations;
-    results = lResults.results;
-    userInfo = lResults.userInfo;
+    results = JSON.parse(text); // TODO error checking
   }));
-
-  // TODO should consolidate the file reading boilerplate here really
-  $('#annFileInput').bind('change', readFileFactory((text) => {
-    const lines = text.split('\n');
-    _.each(lines, (l) => {
-      const fields = l.split('\t');
-      const uid = fields[0].split('.')[0];
-      if(!_.has(annotations, uid)) {
-        annotations[uid] = [];
-      }
-      if(!_.find(annotations[uid], (ann) => { ann.sentence == fields[7] })) { // remove annoying duplicates
-        annotations[uid].push({
-          iri: fields[1],
-          label: fields[2],
-          matchedText: fields[3],
-          group: fields[4],
-          tags: fields[5],
-          sid: fields[6],
-          sentence: fields[7]
-        });
-      }
-    });
-  }));
-  $('#diaFileInput').bind('change', readFileFactory((text) => {
-    const lines = text.split('\n');
-    _.each(lines, (l) => {
-      const fields = l.split('\t');
-
-      const uid = fields[0].split('.')[0];
-      const iri = fields[1];
-      const label = fields[2];
-      const target = fields[3];
-      const status = fields[4];
-
-      if(!_.has(diagnoses, uid)) {
-        diagnoses[uid] = {};
-      }
-      if(!_.has(diagnoses[uid], iri)) {
-        diagnoses[uid][iri] = {};
-      }
-
-      diagnoses[uid][iri][target] = {
-        iri, label, target, status
-      };
-
-      if(label == 'null') { groupMode = true; }
-
-      if(!_.has(iriLabels, iri)) { iriLabels[iri] = label; }
-    });
+  $('#samFileInput').bind('change', readFileFactory((text) => {
+    sample = text.split('\n');
   }));
 };
 
 const loadList = (cb) => {
   var u = url.parse(window.location.href, true).query;
-
-  // Calculate current precision
-  // TODO add: FN
-  const perf = {
-    overall: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' },
-    affirmed: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' },
-    negated: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' },
-    uncertain: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' }
-  }
-  _.each(results, (entity) => {
-    _.each(entity.statcheck, (entry, id) => {
-      if(entry.value) { 
-        perf.overall.tp++; 
-
-        const cl = id.split('::')[3];
-        perf[cl].tp++;
-
-      } else { 
-        perf.overall.fp++; 
-
-        const cl = id.split('::')[3];
-        perf[cl].fp++;
-
-        perf[entry.correction].fn++;
-
-        perf.overall.fn++;
-      } 
-    })
-  });
-  _.each(perf, (val, cat) => {  
-    if(val.tp+val.fp > 0) {
-      val.precision = val.tp / (val.tp + val.fp)
-    }
-    if(val.tp+val.fn > 0) {
-      val.recall = val.tp / (val.tp + val.fn)
-    }
-  })
-
-  $('#content').html(listTemplate({ diagnoses, results, perf, groupMode }));
+  $('#content').html(listTemplate({ sample, results }));
 
   $('#save').bind('click', () => {
-    saveText(JSON.stringify({ 
-      diagnoses, annotations, results, userInfo
-    }), 'results.json');
+    saveText(JSON.stringify({ sample, results, userInfo }), 'results.json');
   });
-  $('#performance').bind('click', () => {
-    $("#perfModal").modal();
-  })
 
   $('#plist tfoot th').each(function() {
     var title = $(this).text();
@@ -211,19 +123,51 @@ const loadList = (cb) => {
 };
  
 /*
- * Load a patient view
+ * Load entry view 
  */
+const changedAnswer = (id) => {
+  console.log(id);
+  refreshDisabled();
+} 
+const refreshDisabled = () => {
+  $('select').each(function() {
+    const qid = $(this).attr('id');
+    const question = qMap[qid];
+
+    console.log(qid)
+    var disabled = false;
+    if(question.askif) {
+      _.each(question.askif, (aq) => {
+        const select = document.getElementById(aq.id)
+        const selected = select.options[select.selectedIndex].value
+        const c = _.includes(aq.response, 
+          selected);
+
+        console.log(c)
+        if(c == false) {
+            disabled = true 
+        }
+      })
+    }
+
+    $(this).prop('disabled', disabled);
+  });
+
+  $('tr').each(function() {
+    if($(this).find('select').attr('disabled') == 'disabled') {
+      $(this).hide();
+    } else {
+      $(this).show();
+    }
+  })
+}
 const loadView = (uid) => {
-  $('#content').html(viewTemplate({
-    uid,
-    diagnoses: diagnoses[uid],
-    annotations: annotations[uid],
-    iriLabels,
-    groupMode
-  }));
+  $('#content').html(viewTemplate({ uid, questions }));
 
   resetScroll();
+  refreshDisabled();
 
+  // Reload the results
   if(_.has(results, uid)) {
     const r = results[uid];
     $('#comments').text(r.comments);
@@ -235,12 +179,8 @@ const loadView = (uid) => {
       document.getElementById(sassertions.item(i).id+'::correction').value = r.statcheck[sassertions.item(i).id].correction;
     }
   }
-
-  $('.statcheck').click(function() {
-    document.getElementById(this.id+'::correction').disabled = this.checked;
-  });
-
-  $('[data-toggle="tooltip"]').tooltip();
+ 
+  // on save
   $('#save').bind('click', () => {
     let result = {
       'uid': uid,
@@ -273,4 +213,4 @@ function resetScroll() {
   document.body.scrollTop = document.documentElement.scrollTop = 0;
 }
 
-module.exports = { 'loadView': loadView, 'loadIndex': loadIndex, 'loadList': loadList };
+module.exports = { 'loadView': loadView, 'loadIndex': loadIndex, 'loadList': loadList, 'changedAnswer': changedAnswer };

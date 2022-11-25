@@ -1,64 +1,33 @@
 .container
-  - var ts = ['self', 'family'];
   h1 
     a(href='javascript:f.loadList()') Back to list 
-  h1 Text-mined entities for #{uid}
+  h1 Questionairre for #{uid}
+  
+  -var gcount = 0 
+  each g in questions.groups
+    h2 #{g.title}
 
-  each targets, iri in diagnoses
-    if groupMode
-      h3 #{iri}
-    else
-      h3 #{iriLabels[iri]}
-
-    each t in ts
-      if targets[t] 
-        - const a = targets[t]
-
-        p #{t} status: #{a.status}
-        label Correct? 
-        input.statcheck(id=uid+'::'+a.iri+'::'+a.target+'::'+a.status type="checkbox" name="correct")
-        label Should be:
-        select.shouldbe(id=uid+'::'+a.iri+'::'+a.target+'::'+a.status+'::correction')
-          option(value='affirmed') Affirmed
-          option(value='uncertain') Uncertain
-          option(value='negated') Negated
-
-        table.table.clist
-          thead
-            th Sentence
-            th Text
-            th Tags
-            th(style="display:none;") Classification
-          tbody 
-            div.panel-body 
-              each ann in annotations
-                if (groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)
-                  if((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))
-                    - //var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
-                    - //var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
-                    - //var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
-                    tr
-                      td #{ann.sid}
-                      td !{ann.sentence}
-                      td #{ann.tags}
-
-                      td(style="display:none;")
-                        table
-                          tr
-                            td.aabox
-                              label mention 
-                            td.aabox
-                              label uncertain
-                            td.aabox
-                              label negation
-                          tr
-                            td.aabox
-                              input.echeck(id=title+'::'+sid+'::mention' type="checkbox" name="correct" checked=mChecked)
-                            td.aabox
-                              input.echeck(id=title+'::'+sid+'::uncertain' type="checkbox" name="correct" checked=uChecked)
-                            td.aabox
-                              input.echeck(id=title+'::'+sid+'::negation' type="checkbox" name="correct" checked=nChecked)
-
+    each qg in g.questions
+      -gcount++
+      table.question.stripe(id='question::'+gcount)
+        tbody
+          each q in qg
+            tr(width="100%")
+              td(style='text-align:left' width="80%")
+                label #{q.question}
+              td(style='align:right;text-align:right;')
+                // no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...
+                - var id = q.id
+                if q.askif
+                  select.v(id=q.id onchange="javascript:f.changedAnswer(id)" disabled)
+                    option(value=' ')
+                    each r in q.responses
+                      option(value=r) #{r}
+                else 
+                  select.v(id=q.id onchange="javascript:f.changedAnswer(id)")
+                    option(value=' ')
+                    each r in q.responses
+                      option(value=r) #{r}
 
   label.h5 Additional Comments
   br

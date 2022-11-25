@@ -6,13 +6,21 @@ var url = require('url'),
     dataTable = require('datatables'),
     FileSaver = require('file-saver'),
     _ = require('lodash')._,
+    sample = {},
     results = {},
-    userInfo = {},
-    annotations = {},
-    diagnoses = {},
-    iriLabels = {},
+    questions = require('./questions.json'),
+    qMap = {},
     table,
     groupMode = false;
+
+_.each(questions.groups, (groups) => {
+  _.each(groups.questions, (g) => {
+    _.each(g, (q) => {
+        console.log(q.id)
+        qMap[q.id] = q;
+    })
+  })
+});
 
 $(document).ready(function() {
   loadIndex();
@@ -76,116 +84,20 @@ const loadIndex = (cb) => {
   })
 
   $('#progressFileInput').bind('change', readFileFactory((text) => {
-    const lResults = JSON.parse(text); // TODO error checking
-
-    // TODO we should also probably just store them in a single object here. unnecessary to decompose them like this
-    diagnoses = lResults.diagnoses;
-    annotations = lResults.annotations;
-    results = lResults.results;
-    userInfo = lResults.userInfo;
+    results = JSON.parse(text); // TODO error checking
   }));
-
-  // TODO should consolidate the file reading boilerplate here really
-  $('#annFileInput').bind('change', readFileFactory((text) => {
-    const lines = text.split('\n');
-    _.each(lines, (l) => {
-      const fields = l.split('\t');
-      const uid = fields[0].split('.')[0];
-      if(!_.has(annotations, uid)) {
-        annotations[uid] = [];
-      }
-      if(!_.find(annotations[uid], (ann) => { ann.sentence == fields[7] })) { // remove annoying duplicates
-        annotations[uid].push({
-          iri: fields[1],
-          label: fields[2],
-          matchedText: fields[3],
-          group: fields[4],
-          tags: fields[5],
-          sid: fields[6],
-          sentence: fields[7]
-        });
-      }
-    });
-  }));
-  $('#diaFileInput').bind('change', readFileFactory((text) => {
-    const lines = text.split('\n');
-    _.each(lines, (l) => {
-      const fields = l.split('\t');
-
-      const uid = fields[0].split('.')[0];
-      const iri = fields[1];
-      const label = fields[2];
-      const target = fields[3];
-      const status = fields[4];
-
-      if(!_.has(diagnoses, uid)) {
-        diagnoses[uid] = {};
-      }
-      if(!_.has(diagnoses[uid], iri)) {
-        diagnoses[uid][iri] = {};
-      }
-
-      diagnoses[uid][iri][target] = {
-        iri, label, target, status
-      };
-
-      if(label == 'null') { groupMode = true; }
-
-      if(!_.has(iriLabels, iri)) { iriLabels[iri] = label; }
-    });
+  $('#samFileInput').bind('change', readFileFactory((text) => {
+    sample = text.split('\n');
   }));
 };
 
 const loadList = (cb) => {
   var u = url.parse(window.location.href, true).query;
-
-  // Calculate current precision
-  // TODO add: FN
-  const perf = {
-    overall: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' },
-    affirmed: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' },
-    negated: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' },
-    uncertain: { tp: 0, fp: 0, fn: 0, precision: 'N/A', recall: 'N/A' }
-  }
-  _.each(results, (entity) => {
-    _.each(entity.statcheck, (entry, id) => {
-      if(entry.value) { 
-        perf.overall.tp++; 
-
-        const cl = id.split('::')[3];
-        perf[cl].tp++;
-
-      } else { 
-        perf.overall.fp++; 
-
-        const cl = id.split('::')[3];
-        perf[cl].fp++;
-
-        perf[entry.correction].fn++;
-
-        perf.overall.fn++;
-      } 
-    })
-  });
-  _.each(perf, (val, cat) => {  
-    if(val.tp+val.fp > 0) {
-      val.precision = val.tp / (val.tp + val.fp)
-    }
-    if(val.tp+val.fn > 0) {
-      val.recall = val.tp / (val.tp + val.fn)
-    }
-  })
-
-  $('#content').html(listTemplate({ diagnoses, results, perf, groupMode }));
+  $('#content').html(listTemplate({ sample, results }));
 
   $('#save').bind('click', () => {
-    saveText(JSON.stringify({ 
-      diagnoses, annotations, results, userInfo
-    }), 'results.json');
+    saveText(JSON.stringify({ sample, results, userInfo }), 'results.json');
   });
-  $('#performance').bind('click', () => {
-    $("#perfModal").modal();
-  })
 
   $('#plist tfoot th').each(function() {
     var title = $(this).text();
@@ -212,19 +124,51 @@ const loadList = (cb) => {
 };
  
 /*
- * Load a patient view
+ * Load entry view 
  */
+const changedAnswer = (id) => {
+  console.log(id);
+  refreshDisabled();
+} 
+const refreshDisabled = () => {
+  $('select').each(function() {
+    const qid = $(this).attr('id');
+    const question = qMap[qid];
+
+    console.log(qid)
+    var disabled = false;
+    if(question.askif) {
+      _.each(question.askif, (aq) => {
+        const select = document.getElementById(aq.id)
+        const selected = select.options[select.selectedIndex].value
+        const c = _.includes(aq.response, 
+          selected);
+
+        console.log(c)
+        if(c == false) {
+            disabled = true 
+        }
+      })
+    }
+
+    $(this).prop('disabled', disabled);
+  });
+
+  $('tr').each(function() {
+    if($(this).find('select').attr('disabled') == 'disabled') {
+      $(this).hide();
+    } else {
+      $(this).show();
+    }
+  })
+}
 const loadView = (uid) => {
-  $('#content').html(viewTemplate({
-    uid,
-    diagnoses: diagnoses[uid],
-    annotations: annotations[uid],
-    iriLabels,
-    groupMode
-  }));
+  $('#content').html(viewTemplate({ uid, questions }));
 
   resetScroll();
+  refreshDisabled();
 
+  // Reload the results
   if(_.has(results, uid)) {
     const r = results[uid];
     $('#comments').text(r.comments);
@@ -236,12 +180,8 @@ const loadView = (uid) => {
       document.getElementById(sassertions.item(i).id+'::correction').value = r.statcheck[sassertions.item(i).id].correction;
     }
   }
-
-  $('.statcheck').click(function() {
-    document.getElementById(this.id+'::correction').disabled = this.checked;
-  });
-
-  $('[data-toggle="tooltip"]').tooltip();
+ 
+  // on save
   $('#save').bind('click', () => {
     let result = {
       'uid': uid,
@@ -274,9 +214,9 @@ function resetScroll() {
   document.body.scrollTop = document.documentElement.scrollTop = 0;
 }
 
-module.exports = { 'loadView': loadView, 'loadIndex': loadIndex, 'loadList': loadList };
+module.exports = { 'loadView': loadView, 'loadIndex': loadIndex, 'loadList': loadList, 'changedAnswer': changedAnswer };
 
-},{"./index.pug":2,"./list.pug":3,"./view.pug":9,"datatables":4,"file-saver":5,"lodash":7,"url":16}],2:[function(require,module,exports){
+},{"./index.pug":2,"./list.pug":3,"./questions.json":9,"./view.pug":10,"datatables":4,"file-saver":5,"lodash":7,"url":17}],2:[function(require,module,exports){
 var pug = require('pug-runtime');
 module.exports=template;function pug_rethrow(n,e,r,t){if(!(n instanceof Error))throw n;if(!("undefined"==typeof window&&e||t))throw n.message+=" on line "+r,n;try{t=t||require("fs").readFileSync(e,"utf8")}catch(e){pug_rethrow(n,null,r)}var i=3,a=t.split("\n"),o=Math.max(r-i,0),h=Math.min(a.length,r+i),i=a.slice(o,h).map(function(n,e){var t=e+o+1;return(t==r?"  > ":"    ")+t+"| "+n}).join("\n");throw n.path=e,n.message=(e||"Pug")+":"+r+"\n"+i+"\n\n"+n.message,n}function template(locals) {var pug_html = "", pug_mixins = {}, pug_interp;
 var pug_indent = [];
@@ -343,23 +283,15 @@ pug_html = pug_html + "\n              \u003Cinput id=\"specialtyInput\" type=\"
 
 pug_html = pug_html + "\n            \u003Cdiv class=\"form-group form-control-static\"\u003E";
 
-pug_html = pug_html + "\n              \u003Clabel for=\"resultsFileInput\"\u003E";
+pug_html = pug_html + "\n              \u003Clabel for=\"sampleFileInput\"\u003E";
 
-pug_html = pug_html + "Select Komenti annotations file:\u003C\u002Flabel\u003E";
+pug_html = pug_html + "Select patient sample file:\u003C\u002Flabel\u003E";
 
-pug_html = pug_html + "\n              \u003Cinput id=\"annFileInput\" type=\"file\"\u002F\u003E\n            \u003C\u002Fdiv\u003E";
-
-pug_html = pug_html + "\n            \u003Cdiv class=\"form-group form-control-static\"\u003E";
-
-pug_html = pug_html + "\n              \u003Clabel for=\"resultsFileInput\"\u003E";
-
-pug_html = pug_html + "Select Komenti diagnosis file:\u003C\u002Flabel\u003E";
-
-pug_html = pug_html + "\n              \u003Cinput id=\"diaFileInput\" type=\"file\"\u002F\u003E\n            \u003C\u002Fdiv\u003E";
+pug_html = pug_html + "\n              \u003Cinput id=\"samFileInput\" type=\"file\"\u002F\u003E\n            \u003C\u002Fdiv\u003E";
 
 pug_html = pug_html + "\n            \u003Cbutton class=\"btn btn-primary\" id=\"newBtn\" type=\"button\"\u003E";
 
-pug_html = pug_html + "Load Patients\u003C\u002Fbutton\u003E\n          \u003C\u002Fdiv\u003E";
+pug_html = pug_html + "Start\u003C\u002Fbutton\u003E\n          \u003C\u002Fdiv\u003E";
 
 pug_html = pug_html + "\n          \u003Cdiv class=\"content-section\" id=\"section2\" style=\"display:none;\"\u003E";
 
@@ -377,171 +309,35 @@ pug_html = pug_html + "\n              \u003Cinput id=\"progressFileInput\" type
 
 pug_html = pug_html + "\n            \u003Cbutton class=\"btn btn-primary\" id=\"loadBtn\" type=\"button\"\u003E";
 
-pug_html = pug_html + "Load Results\u003C\u002Fbutton\u003E\n          \u003C\u002Fdiv\u003E\n        \u003C\u002Fdiv\u003E";
+pug_html = pug_html + "Start\u003C\u002Fbutton\u003E\n          \u003C\u002Fdiv\u003E\n        \u003C\u002Fdiv\u003E";
 
 pug_html = pug_html + "\n        \u003Cdiv class=\"modal-footer\"\u003E";
 
 pug_html = pug_html + "\n          \u003Cp\u003E";
 
-pug_html = pug_html + "Version: 0.2.0\u003C\u002Fp\u003E\n        \u003C\u002Fdiv\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E\n\u003C\u002Fdiv\u003E";return pug_html;}
+pug_html = pug_html + "Version: 0.3.0-gsval\u003C\u002Fp\u003E\n        \u003C\u002Fdiv\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E\n\u003C\u002Fdiv\u003E";return pug_html;}
 
-},{"fs":10,"pug-runtime":8}],3:[function(require,module,exports){
+},{"fs":11,"pug-runtime":8}],3:[function(require,module,exports){
 var pug = require('pug-runtime');
 module.exports=template;function pug_attr(t,e,n,r){if(!1===e||null==e||!e&&("class"===t||"style"===t))return"";if(!0===e)return" "+(r?t:t+'="'+t+'"');var f=typeof e;return"object"!==f&&"function"!==f||"function"!=typeof e.toJSON||(e=e.toJSON()),"string"==typeof e||(e=JSON.stringify(e),n||-1===e.indexOf('"'))?(n&&(e=pug_escape(e))," "+t+'="'+e+'"'):" "+t+"='"+e.replace(/'/g,"&#39;")+"'"}
 function pug_escape(e){var a=""+e,t=pug_match_html.exec(a);if(!t)return e;var r,c,n,s="";for(r=t.index,c=0;r<a.length;r++){switch(a.charCodeAt(r)){case 34:n="&quot;";break;case 38:n="&amp;";break;case 60:n="&lt;";break;case 62:n="&gt;";break;default:continue}c!==r&&(s+=a.substring(c,r)),c=r+1,s+=n}return c!==r?s+a.substring(c,r):s}
 var pug_match_html=/["&<>]/;
 function pug_rethrow(n,e,r,t){if(!(n instanceof Error))throw n;if(!("undefined"==typeof window&&e||t))throw n.message+=" on line "+r,n;try{t=t||require("fs").readFileSync(e,"utf8")}catch(e){pug_rethrow(n,null,r)}var i=3,a=t.split("\n"),o=Math.max(r-i,0),h=Math.min(a.length,r+i),i=a.slice(o,h).map(function(n,e){var t=e+o+1;return(t==r?"  > ":"    ")+t+"| "+n}).join("\n");throw n.path=e,n.message=(e||"Pug")+":"+r+"\n"+i+"\n\n"+n.message,n}function template(locals) {var pug_html = "", pug_mixins = {}, pug_interp;
-;var locals_for_with = (locals || {});(function (diagnoses, groupMode, perf, results) {var pug_indent = [];
+;var locals_for_with = (locals || {});(function (results, sample, uid) {var pug_indent = [];
 
 pug_html = pug_html + "\n\u003Cdiv class=\"container\"\u003E";
 
 pug_html = pug_html + " ";
 
-pug_html = pug_html + "\n  \u003Cdiv class=\"modal\" id=\"perfModal\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"#finaliseModalLabel\" aria-hidden=\"true\"\u003E";
-
-pug_html = pug_html + "\n    \u003Cdiv class=\"modal-dialog\" role=\"document\"\u003E";
-
-pug_html = pug_html + "\n      \u003Cdiv class=\"modal-content\"\u003E";
-
-pug_html = pug_html + "\n        \u003Cdiv class=\"modal-body\"\u003E";
-
-pug_html = pug_html + "\n          \u003Ch3 class=\"modal-title\" id=\"perfModalLabel\"\u003E";
-
-pug_html = pug_html + "Performance\u003C\u002Fh3\u003E";
-
-pug_html = pug_html + "\n          \u003Ch4\u003E";
-
-pug_html = pug_html + "Overall \u003C\u002Fh4\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "TP: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.overall.tp) ? "" : pug_interp));
-
-pug_html = pug_html + ", FP: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.overall.fp) ? "" : pug_interp));
-
-pug_html = pug_html + ", FN: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.overall.fn) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "Precision: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.overall.precision) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "Recall: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.overall.recall) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Ch4\u003E";
-
-pug_html = pug_html + "Affirmed\u003C\u002Fh4\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "TP: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.affirmed.tp) ? "" : pug_interp));
-
-pug_html = pug_html + ", FP: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.affirmed.fp) ? "" : pug_interp));
-
-pug_html = pug_html + ", FN: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.affirmed.fn) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "Precision: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.affirmed.precision) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "Recall: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.affirmed.recall) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Ch4\u003E";
-
-pug_html = pug_html + "Uncertain\u003C\u002Fh4\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "TP: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.uncertain.tp) ? "" : pug_interp));
-
-pug_html = pug_html + ", FP: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.uncertain.fp) ? "" : pug_interp));
-
-pug_html = pug_html + ", FN: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.uncertain.fn) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "Precision: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.uncertain.precision) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "Recall: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.uncertain.recall) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Ch4\u003E";
-
-pug_html = pug_html + "Negated\u003C\u002Fh4\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "TP: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.negated.tp) ? "" : pug_interp));
-
-pug_html = pug_html + ", FP: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.negated.fp) ? "" : pug_interp));
-
-pug_html = pug_html + ", FN: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.negated.fn) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "Precision: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.negated.precision) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n          \u003Cp\u003E";
-
-pug_html = pug_html + "Recall: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = perf.negated.recall) ? "" : pug_interp)) + "\u003C\u002Fp\u003E\n        \u003C\u002Fdiv\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E";
-
 var c = 0;
 
 pug_html = pug_html + "\n  \u003Ch1\u003E";
 
-pug_html = pug_html + "Medotate\u003C\u002Fh1\u003E";
+pug_html = pug_html + "Gold Standard Creator\u003C\u002Fh1\u003E";
 
 pug_html = pug_html + "\n  \u003Cbutton class=\"submit\" id=\"save\" value=\"Submit\" style=\"font-size:20px\"\u003E";
 
 pug_html = pug_html + "Save Results\u003C\u002Fbutton\u003E";
-
-pug_html = pug_html + "\n  \u003Cbutton id=\"performance\" value=\"View\" style=\"font-size:20px\"\u003E";
-
-pug_html = pug_html + "View Performance\u003C\u002Fbutton\u003E";
 
 pug_html = pug_html + "\n  \u003Ch3\u003E";
 
@@ -553,17 +349,9 @@ pug_html = pug_html + "\n    \u003Cthead\u003E";
 
 pug_html = pug_html + "\n      \u003Ctr\u003E";
 
-pug_html = pug_html + "\n        \u003Cth style=\"width:18%\"\u003E";
+pug_html = pug_html + "\n        \u003Cth style=\"width:100%\"\u003E";
 
-pug_html = pug_html + "Number\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n        \u003Cth style=\"width:18%\"\u003E";
-
-pug_html = pug_html + "UID\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n        \u003Cth style=\"width:18%\"\u003E";
-
-pug_html = pug_html + "Factors\u003C\u002Fth\u003E\n      \u003C\u002Ftr\u003E\n    \u003C\u002Fthead\u003E";
+pug_html = pug_html + "ID\u003C\u002Fth\u003E\n      \u003C\u002Ftr\u003E\n    \u003C\u002Fthead\u003E";
 
 pug_html = pug_html + "\n    \u003Ctfoot\u003E";
 
@@ -571,185 +359,77 @@ pug_html = pug_html + "\n      \u003Ctr\u003E";
 
 pug_html = pug_html + "\n        \u003Cth style=\"width:18%\"\u003E";
 
-pug_html = pug_html + "Number\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n        \u003Cth style=\"width:18%\"\u003E";
-
-pug_html = pug_html + "UID\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n        \u003Cth style=\"width:18%\"\u003E";
-
-pug_html = pug_html + "Factors\u003C\u002Fth\u003E\n      \u003C\u002Ftr\u003E\n    \u003C\u002Ftfoot\u003E";
+pug_html = pug_html + "ID\u003C\u002Fth\u003E\n      \u003C\u002Ftr\u003E\n    \u003C\u002Ftfoot\u003E";
 
 pug_html = pug_html + "\n    \u003Ctbody\u003E";
 
-// iterate diagnoses
+// iterate sample
 ;(function(){
-  var $$obj = diagnoses;
+  var $$obj = sample;
   if ('number' == typeof $$obj.length) {
-      for (var uid = 0, $$l = $$obj.length; uid < $$l; uid++) {
-        var entries = $$obj[uid];
+      for (var pug_index0 = 0, $$l = $$obj.length; pug_index0 < $$l; pug_index0++) {
+        var id = $$obj[pug_index0];
 
 c++
 
-var factors = []
-
-// iterate entries
-;(function(){
-  var $$obj = entries;
-  if ('number' == typeof $$obj.length) {
-      for (var pug_index1 = 0, $$l = $$obj.length; pug_index1 < $$l; pug_index1++) {
-        var iri = $$obj[pug_index1];
-
-if (iri.self) {
-
-if (groupMode) {
-
-factors.push(iri.self.iri)
-}
-else {
-
-factors.push(iri.self.label)
-}
-}
-      }
-  } else {
-    var $$l = 0;
-    for (var pug_index1 in $$obj) {
-      $$l++;
-      var iri = $$obj[pug_index1];
-
-if (iri.self) {
-
-if (groupMode) {
-
-factors.push(iri.self.iri)
-}
-else {
-
-factors.push(iri.self.label)
-}
-}
-    }
-  }
-}).call(this);
-
-
 pug_html = pug_html + "\n      \u003Ctr\u003E";
-
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\"\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = c) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
 
 if(results[uid])
 {
 
 pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left;background-color:green;\"\u003E";
 
-pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+uid+'")', true, false)+" style=\"color: white\"") + "\u003E";
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id+'")', true, false)+" style=\"color: white\"") + "\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = id) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
 }
 else
 {
 
 pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\"\u003E";
 
-pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+uid+'")', true, false)) + "\u003E";
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id+'")', true, false)) + "\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = id) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
 }
-
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\"\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = factors.join(', ')) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n      \u003C\u002Ftr\u003E";
       }
   } else {
     var $$l = 0;
-    for (var uid in $$obj) {
+    for (var pug_index0 in $$obj) {
       $$l++;
-      var entries = $$obj[uid];
+      var id = $$obj[pug_index0];
 
 c++
 
-var factors = []
-
-// iterate entries
-;(function(){
-  var $$obj = entries;
-  if ('number' == typeof $$obj.length) {
-      for (var pug_index2 = 0, $$l = $$obj.length; pug_index2 < $$l; pug_index2++) {
-        var iri = $$obj[pug_index2];
-
-if (iri.self) {
-
-if (groupMode) {
-
-factors.push(iri.self.iri)
-}
-else {
-
-factors.push(iri.self.label)
-}
-}
-      }
-  } else {
-    var $$l = 0;
-    for (var pug_index2 in $$obj) {
-      $$l++;
-      var iri = $$obj[pug_index2];
-
-if (iri.self) {
-
-if (groupMode) {
-
-factors.push(iri.self.iri)
-}
-else {
-
-factors.push(iri.self.label)
-}
-}
-    }
-  }
-}).call(this);
-
-
 pug_html = pug_html + "\n      \u003Ctr\u003E";
-
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\"\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = c) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
 
 if(results[uid])
 {
 
 pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left;background-color:green;\"\u003E";
 
-pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+uid+'")', true, false)+" style=\"color: white\"") + "\u003E";
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id+'")', true, false)+" style=\"color: white\"") + "\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = id) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
 }
 else
 {
 
 pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\"\u003E";
 
-pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+uid+'")', true, false)) + "\u003E";
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id+'")', true, false)) + "\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = id) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
 }
-
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\"\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = factors.join(', ')) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n      \u003C\u002Ftr\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"diagnoses" in locals_for_with?locals_for_with.diagnoses:typeof diagnoses!=="undefined"?diagnoses:undefined,"groupMode" in locals_for_with?locals_for_with.groupMode:typeof groupMode!=="undefined"?groupMode:undefined,"perf" in locals_for_with?locals_for_with.perf:typeof perf!=="undefined"?perf:undefined,"results" in locals_for_with?locals_for_with.results:typeof results!=="undefined"?results:undefined));return pug_html;}
+pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"results" in locals_for_with?locals_for_with.results:typeof results!=="undefined"?results:undefined,"sample" in locals_for_with?locals_for_with.sample:typeof sample!=="undefined"?sample:undefined,"uid" in locals_for_with?locals_for_with.uid:typeof uid!=="undefined"?uid:undefined));return pug_html;}
 
-},{"fs":10,"pug-runtime":8}],4:[function(require,module,exports){
+},{"fs":11,"pug-runtime":8}],4:[function(require,module,exports){
 /*! DataTables 1.10.18
  * ©2008-2018 SpryMedia Ltd - datatables.net/license
  */
@@ -16049,23 +15729,23 @@ pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E\
 
 },{"jquery":6}],5:[function(require,module,exports){
 (function (global){(function (){
-(function(a,b){if("function"==typeof define&&define.amd)define([],b);else if("undefined"!=typeof exports)b();else{b(),a.FileSaver={exports:{}}.exports}})(this,function(){"use strict";function b(a,b){return"undefined"==typeof b?b={autoBom:!1}:"object"!=typeof b&&(console.warn("Deprecated: Expected third argument to be a object"),b={autoBom:!b}),b.autoBom&&/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(a.type)?new Blob(["\uFEFF",a],{type:a.type}):a}function c(b,c,d){var e=new XMLHttpRequest;e.open("GET",b),e.responseType="blob",e.onload=function(){a(e.response,c,d)},e.onerror=function(){console.error("could not download file")},e.send()}function d(a){var b=new XMLHttpRequest;b.open("HEAD",a,!1);try{b.send()}catch(a){}return 200<=b.status&&299>=b.status}function e(a){try{a.dispatchEvent(new MouseEvent("click"))}catch(c){var b=document.createEvent("MouseEvents");b.initMouseEvent("click",!0,!0,window,0,0,0,80,20,!1,!1,!1,!1,0,null),a.dispatchEvent(b)}}var f="object"==typeof window&&window.window===window?window:"object"==typeof self&&self.self===self?self:"object"==typeof global&&global.global===global?global:void 0,a=f.saveAs||("object"!=typeof window||window!==f?function(){}:"download"in HTMLAnchorElement.prototype?function(b,g,h){var i=f.URL||f.webkitURL,j=document.createElement("a");g=g||b.name||"download",j.download=g,j.rel="noopener","string"==typeof b?(j.href=b,j.origin===location.origin?e(j):d(j.href)?c(b,g,h):e(j,j.target="_blank")):(j.href=i.createObjectURL(b),setTimeout(function(){i.revokeObjectURL(j.href)},4E4),setTimeout(function(){e(j)},0))}:"msSaveOrOpenBlob"in navigator?function(f,g,h){if(g=g||f.name||"download","string"!=typeof f)navigator.msSaveOrOpenBlob(b(f,h),g);else if(d(f))c(f,g,h);else{var i=document.createElement("a");i.href=f,i.target="_blank",setTimeout(function(){e(i)})}}:function(a,b,d,e){if(e=e||open("","_blank"),e&&(e.document.title=e.document.body.innerText="downloading..."),"string"==typeof a)return c(a,b,d);var g="application/octet-stream"===a.type,h=/constructor/i.test(f.HTMLElement)||f.safari,i=/CriOS\/[\d]+/.test(navigator.userAgent);if((i||g&&h)&&"object"==typeof FileReader){var j=new FileReader;j.onloadend=function(){var a=j.result;a=i?a:a.replace(/^data:[^;]*;/,"data:attachment/file;"),e?e.location.href=a:location=a,e=null},j.readAsDataURL(a)}else{var k=f.URL||f.webkitURL,l=k.createObjectURL(a);e?e.location=l:location.href=l,e=null,setTimeout(function(){k.revokeObjectURL(l)},4E4)}});f.saveAs=a.saveAs=a,"undefined"!=typeof module&&(module.exports=a)});
+(function(a,b){if("function"==typeof define&&define.amd)define([],b);else if("undefined"!=typeof exports)b();else{b(),a.FileSaver={exports:{}}.exports}})(this,function(){"use strict";function b(a,b){return"undefined"==typeof b?b={autoBom:!1}:"object"!=typeof b&&(console.warn("Deprecated: Expected third argument to be a object"),b={autoBom:!b}),b.autoBom&&/^\s*(?:text\/\S*|application\/xml|\S*\/\S*\+xml)\s*;.*charset\s*=\s*utf-8/i.test(a.type)?new Blob(["\uFEFF",a],{type:a.type}):a}function c(a,b,c){var d=new XMLHttpRequest;d.open("GET",a),d.responseType="blob",d.onload=function(){g(d.response,b,c)},d.onerror=function(){console.error("could not download file")},d.send()}function d(a){var b=new XMLHttpRequest;b.open("HEAD",a,!1);try{b.send()}catch(a){}return 200<=b.status&&299>=b.status}function e(a){try{a.dispatchEvent(new MouseEvent("click"))}catch(c){var b=document.createEvent("MouseEvents");b.initMouseEvent("click",!0,!0,window,0,0,0,80,20,!1,!1,!1,!1,0,null),a.dispatchEvent(b)}}var f="object"==typeof window&&window.window===window?window:"object"==typeof self&&self.self===self?self:"object"==typeof global&&global.global===global?global:void 0,a=f.navigator&&/Macintosh/.test(navigator.userAgent)&&/AppleWebKit/.test(navigator.userAgent)&&!/Safari/.test(navigator.userAgent),g=f.saveAs||("object"!=typeof window||window!==f?function(){}:"download"in HTMLAnchorElement.prototype&&!a?function(b,g,h){var i=f.URL||f.webkitURL,j=document.createElement("a");g=g||b.name||"download",j.download=g,j.rel="noopener","string"==typeof b?(j.href=b,j.origin===location.origin?e(j):d(j.href)?c(b,g,h):e(j,j.target="_blank")):(j.href=i.createObjectURL(b),setTimeout(function(){i.revokeObjectURL(j.href)},4E4),setTimeout(function(){e(j)},0))}:"msSaveOrOpenBlob"in navigator?function(f,g,h){if(g=g||f.name||"download","string"!=typeof f)navigator.msSaveOrOpenBlob(b(f,h),g);else if(d(f))c(f,g,h);else{var i=document.createElement("a");i.href=f,i.target="_blank",setTimeout(function(){e(i)})}}:function(b,d,e,g){if(g=g||open("","_blank"),g&&(g.document.title=g.document.body.innerText="downloading..."),"string"==typeof b)return c(b,d,e);var h="application/octet-stream"===b.type,i=/constructor/i.test(f.HTMLElement)||f.safari,j=/CriOS\/[\d]+/.test(navigator.userAgent);if((j||h&&i||a)&&"undefined"!=typeof FileReader){var k=new FileReader;k.onloadend=function(){var a=k.result;a=j?a:a.replace(/^data:[^;]*;/,"data:attachment/file;"),g?g.location.href=a:location=a,g=null},k.readAsDataURL(b)}else{var l=f.URL||f.webkitURL,m=l.createObjectURL(b);g?g.location=m:location.href=m,g=null,setTimeout(function(){l.revokeObjectURL(m)},4E4)}});f.saveAs=g.saveAs=g,"undefined"!=typeof module&&(module.exports=g)});
 
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{}],6:[function(require,module,exports){
 /*!
- * jQuery JavaScript Library v3.5.1
+ * jQuery JavaScript Library v3.6.1
  * https://jquery.com/
  *
  * Includes Sizzle.js
  * https://sizzlejs.com/
  *
- * Copyright JS Foundation and other contributors
+ * Copyright OpenJS Foundation and other contributors
  * Released under the MIT license
  * https://jquery.org/license
  *
- * Date: 2020-05-04T22:49Z
+ * Date: 2022-08-26T17:52Z
  */
 ( function( global, factory ) {
 
@@ -16079,7 +15759,7 @@ pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E\
 		// (such as Node.js), expose a factory as module.exports.
 		// This accentuates the need for the creation of a real `window`.
 		// e.g. var jQuery = require("jquery")(window);
-		// See ticket #14549 for more info.
+		// See ticket trac-14549 for more info.
 		module.exports = global.document ?
 			factory( global, true ) :
 			function( w ) {
@@ -16132,12 +15812,16 @@ var support = {};
 
 var isFunction = function isFunction( obj ) {
 
-      // Support: Chrome <=57, Firefox <=52
-      // In some browsers, typeof returns "function" for HTML <object> elements
-      // (i.e., `typeof document.createElement( "object" ) === "function"`).
-      // We don't want to classify *any* DOM node as a function.
-      return typeof obj === "function" && typeof obj.nodeType !== "number";
-  };
+		// Support: Chrome <=57, Firefox <=52
+		// In some browsers, typeof returns "function" for HTML <object> elements
+		// (i.e., `typeof document.createElement( "object" ) === "function"`).
+		// We don't want to classify *any* DOM node as a function.
+		// Support: QtWeb <=3.8.5, WebKit <=534.34, wkhtmltopdf tool <=0.12.5
+		// Plus for old WebKit, typeof returns "function" for HTML collections
+		// (e.g., `typeof document.getElementsByTagName("div") === "function"`). (gh-4756)
+		return typeof obj === "function" && typeof obj.nodeType !== "number" &&
+			typeof obj.item !== "function";
+	};
 
 
 var isWindow = function isWindow( obj ) {
@@ -16203,7 +15887,7 @@ function toType( obj ) {
 
 
 var
-	version = "3.5.1",
+	version = "3.6.1",
 
 	// Define a local copy of jQuery
 	jQuery = function( selector, context ) {
@@ -16457,7 +16141,7 @@ jQuery.extend( {
 			if ( isArrayLike( Object( arr ) ) ) {
 				jQuery.merge( ret,
 					typeof arr === "string" ?
-					[ arr ] : arr
+						[ arr ] : arr
 				);
 			} else {
 				push.call( ret, arr );
@@ -16552,9 +16236,9 @@ if ( typeof Symbol === "function" ) {
 
 // Populate the class2type map
 jQuery.each( "Boolean Number String Function Array Date RegExp Object Error Symbol".split( " " ),
-function( _i, name ) {
-	class2type[ "[object " + name + "]" ] = name.toLowerCase();
-} );
+	function( _i, name ) {
+		class2type[ "[object " + name + "]" ] = name.toLowerCase();
+	} );
 
 function isArrayLike( obj ) {
 
@@ -16574,14 +16258,14 @@ function isArrayLike( obj ) {
 }
 var Sizzle =
 /*!
- * Sizzle CSS Selector Engine v2.3.5
+ * Sizzle CSS Selector Engine v2.3.6
  * https://sizzlejs.com/
  *
  * Copyright JS Foundation and other contributors
  * Released under the MIT license
  * https://js.foundation/
  *
- * Date: 2020-03-14
+ * Date: 2021-02-16
  */
 ( function( window ) {
 var i,
@@ -17164,8 +16848,8 @@ support = Sizzle.support = {};
  * @returns {Boolean} True iff elem is a non-HTML XML node
  */
 isXML = Sizzle.isXML = function( elem ) {
-	var namespace = elem.namespaceURI,
-		docElem = ( elem.ownerDocument || elem ).documentElement;
+	var namespace = elem && elem.namespaceURI,
+		docElem = elem && ( elem.ownerDocument || elem ).documentElement;
 
 	// Support: IE <=8
 	// Assume HTML when documentElement doesn't yet exist, such as inside loading iframes
@@ -19080,9 +18764,9 @@ var rneedsContext = jQuery.expr.match.needsContext;
 
 function nodeName( elem, name ) {
 
-  return elem.nodeName && elem.nodeName.toLowerCase() === name.toLowerCase();
+	return elem.nodeName && elem.nodeName.toLowerCase() === name.toLowerCase();
 
-};
+}
 var rsingleTag = ( /^<([a-z][^\/\0>:\x20\t\r\n\f]*)[\x20\t\r\n\f]*\/?>(?:<\/\1>|)$/i );
 
 
@@ -19181,8 +18865,8 @@ jQuery.fn.extend( {
 var rootjQuery,
 
 	// A simple way to check for HTML strings
-	// Prioritize #id over <tag> to avoid XSS via location.hash (#9521)
-	// Strict HTML recognition (#11290: must start with <)
+	// Prioritize #id over <tag> to avoid XSS via location.hash (trac-9521)
+	// Strict HTML recognition (trac-11290: must start with <)
 	// Shortcut simple #id case for speed
 	rquickExpr = /^(?:\s*(<[\w\W]+>)[^>]*|#([\w-]+))$/,
 
@@ -20053,8 +19737,8 @@ jQuery.extend( {
 			resolveContexts = Array( i ),
 			resolveValues = slice.call( arguments ),
 
-			// the master Deferred
-			master = jQuery.Deferred(),
+			// the primary Deferred
+			primary = jQuery.Deferred(),
 
 			// subordinate callback factory
 			updateFunc = function( i ) {
@@ -20062,30 +19746,30 @@ jQuery.extend( {
 					resolveContexts[ i ] = this;
 					resolveValues[ i ] = arguments.length > 1 ? slice.call( arguments ) : value;
 					if ( !( --remaining ) ) {
-						master.resolveWith( resolveContexts, resolveValues );
+						primary.resolveWith( resolveContexts, resolveValues );
 					}
 				};
 			};
 
 		// Single- and empty arguments are adopted like Promise.resolve
 		if ( remaining <= 1 ) {
-			adoptValue( singleValue, master.done( updateFunc( i ) ).resolve, master.reject,
+			adoptValue( singleValue, primary.done( updateFunc( i ) ).resolve, primary.reject,
 				!remaining );
 
 			// Use .then() to unwrap secondary thenables (cf. gh-3000)
-			if ( master.state() === "pending" ||
+			if ( primary.state() === "pending" ||
 				isFunction( resolveValues[ i ] && resolveValues[ i ].then ) ) {
 
-				return master.then();
+				return primary.then();
 			}
 		}
 
 		// Multiple arguments are aggregated like Promise.all array elements
 		while ( i-- ) {
-			adoptValue( resolveValues[ i ], updateFunc( i ), master.reject );
+			adoptValue( resolveValues[ i ], updateFunc( i ), primary.reject );
 		}
 
-		return master.promise();
+		return primary.promise();
 	}
 } );
 
@@ -20139,7 +19823,7 @@ jQuery.extend( {
 	isReady: false,
 
 	// A counter to track how many items to wait for before
-	// the ready event fires. See #6781
+	// the ready event fires. See trac-6781
 	readyWait: 1,
 
 	// Handle when the DOM is ready
@@ -20236,8 +19920,8 @@ var access = function( elems, fn, key, value, chainable, emptyGet, raw ) {
 			for ( ; i < len; i++ ) {
 				fn(
 					elems[ i ], key, raw ?
-					value :
-					value.call( elems[ i ], i, fn( elems[ i ], key ) )
+						value :
+						value.call( elems[ i ], i, fn( elems[ i ], key ) )
 				);
 			}
 		}
@@ -20267,7 +19951,7 @@ function fcamelCase( _all, letter ) {
 
 // Convert dashed to camelCase; used by the css and data modules
 // Support: IE <=9 - 11, Edge 12 - 15
-// Microsoft forgot to hump their vendor prefix (#9572)
+// Microsoft forgot to hump their vendor prefix (trac-9572)
 function camelCase( string ) {
 	return string.replace( rmsPrefix, "ms-" ).replace( rdashAlpha, fcamelCase );
 }
@@ -20303,7 +19987,7 @@ Data.prototype = {
 			value = {};
 
 			// We can accept data for non-element nodes in modern browsers,
-			// but we should not, see #8335.
+			// but we should not, see trac-8335.
 			// Always return an empty object.
 			if ( acceptData( owner ) ) {
 
@@ -20542,7 +20226,7 @@ jQuery.fn.extend( {
 					while ( i-- ) {
 
 						// Support: IE 11 only
-						// The attrs elements can be null (#14894)
+						// The attrs elements can be null (trac-14894)
 						if ( attrs[ i ] ) {
 							name = attrs[ i ].name;
 							if ( name.indexOf( "data-" ) === 0 ) {
@@ -20965,9 +20649,9 @@ var rscriptType = ( /^$|^module$|\/(?:java|ecma)script/i );
 		input = document.createElement( "input" );
 
 	// Support: Android 4.0 - 4.3 only
-	// Check state lost if the name is set (#11217)
+	// Check state lost if the name is set (trac-11217)
 	// Support: Windows Web Apps (WWA)
-	// `name` and `type` must use .setAttribute for WWA (#14901)
+	// `name` and `type` must use .setAttribute for WWA (trac-14901)
 	input.setAttribute( "type", "radio" );
 	input.setAttribute( "checked", "checked" );
 	input.setAttribute( "name", "t" );
@@ -20991,7 +20675,7 @@ var rscriptType = ( /^$|^module$|\/(?:java|ecma)script/i );
 } )();
 
 
-// We have to close these tags to support XHTML (#13200)
+// We have to close these tags to support XHTML (trac-13200)
 var wrapMap = {
 
 	// XHTML parsers do not magically insert elements in the
@@ -21017,7 +20701,7 @@ if ( !support.option ) {
 function getAll( context, tag ) {
 
 	// Support: IE <=9 - 11 only
-	// Use typeof to avoid zero-argument method invocation on host objects (#15151)
+	// Use typeof to avoid zero-argument method invocation on host objects (trac-15151)
 	var ret;
 
 	if ( typeof context.getElementsByTagName !== "undefined" ) {
@@ -21100,7 +20784,7 @@ function buildFragment( elems, context, scripts, selection, ignored ) {
 				// Remember the top-level container
 				tmp = fragment.firstChild;
 
-				// Ensure the created nodes are orphaned (#12392)
+				// Ensure the created nodes are orphaned (trac-12392)
 				tmp.textContent = "";
 			}
 		}
@@ -21145,10 +20829,7 @@ function buildFragment( elems, context, scripts, selection, ignored ) {
 }
 
 
-var
-	rkeyEvent = /^key/,
-	rmouseEvent = /^(?:mouse|pointer|contextmenu|drag|drop)|click/,
-	rtypenamespace = /^([^.]*)(?:\.(.+)|)/;
+var rtypenamespace = /^([^.]*)(?:\.(.+)|)/;
 
 function returnTrue() {
 	return true;
@@ -21443,8 +21124,8 @@ jQuery.event = {
 			event = jQuery.event.fix( nativeEvent ),
 
 			handlers = (
-					dataPriv.get( this, "events" ) || Object.create( null )
-				)[ event.type ] || [],
+				dataPriv.get( this, "events" ) || Object.create( null )
+			)[ event.type ] || [],
 			special = jQuery.event.special[ event.type ] || {};
 
 		// Use the fix-ed jQuery.Event rather than the (read-only) native event
@@ -21524,15 +21205,15 @@ jQuery.event = {
 
 			for ( ; cur !== this; cur = cur.parentNode || this ) {
 
-				// Don't check non-elements (#13208)
-				// Don't process clicks on disabled elements (#6911, #8165, #11382, #11764)
+				// Don't check non-elements (trac-13208)
+				// Don't process clicks on disabled elements (trac-6911, trac-8165, trac-11382, trac-11764)
 				if ( cur.nodeType === 1 && !( event.type === "click" && cur.disabled === true ) ) {
 					matchedHandlers = [];
 					matchedSelectors = {};
 					for ( i = 0; i < delegateCount; i++ ) {
 						handleObj = handlers[ i ];
 
-						// Don't conflict with Object.prototype properties (#13203)
+						// Don't conflict with Object.prototype properties (trac-13203)
 						sel = handleObj.selector + " ";
 
 						if ( matchedSelectors[ sel ] === undefined ) {
@@ -21568,12 +21249,12 @@ jQuery.event = {
 			get: isFunction( hook ) ?
 				function() {
 					if ( this.originalEvent ) {
-							return hook( this.originalEvent );
+						return hook( this.originalEvent );
 					}
 				} :
 				function() {
 					if ( this.originalEvent ) {
-							return this.originalEvent[ name ];
+						return this.originalEvent[ name ];
 					}
 				},
 
@@ -21712,7 +21393,13 @@ function leverageNative( el, type, expectSync ) {
 						// Cancel the outer synthetic event
 						event.stopImmediatePropagation();
 						event.preventDefault();
-						return result.value;
+
+						// Support: Chrome 86+
+						// In Chrome, if an element having a focusout handler is blurred by
+						// clicking outside of it, it invokes the handler synchronously. If
+						// that handler calls `.remove()` on the element, the data is cleared,
+						// leaving `result` undefined. We need to guard against this.
+						return result && result.value;
 					}
 
 				// If this is an inner synthetic event for an event with a bubbling surrogate
@@ -21780,7 +21467,7 @@ jQuery.Event = function( src, props ) {
 
 		// Create target properties
 		// Support: Safari <=6 - 7 only
-		// Target should not be a text node (#504, #13143)
+		// Target should not be a text node (trac-504, trac-13143)
 		this.target = ( src.target && src.target.nodeType === 3 ) ?
 			src.target.parentNode :
 			src.target;
@@ -21877,34 +21564,7 @@ jQuery.each( {
 	targetTouches: true,
 	toElement: true,
 	touches: true,
-
-	which: function( event ) {
-		var button = event.button;
-
-		// Add which for key events
-		if ( event.which == null && rkeyEvent.test( event.type ) ) {
-			return event.charCode != null ? event.charCode : event.keyCode;
-		}
-
-		// Add which for click: 1 === left; 2 === middle; 3 === right
-		if ( !event.which && button !== undefined && rmouseEvent.test( event.type ) ) {
-			if ( button & 1 ) {
-				return 1;
-			}
-
-			if ( button & 2 ) {
-				return 3;
-			}
-
-			if ( button & 4 ) {
-				return 2;
-			}
-
-			return 0;
-		}
-
-		return event.which;
-	}
+	which: true
 }, jQuery.event.addProp );
 
 jQuery.each( { focus: "focusin", blur: "focusout" }, function( type, delegateType ) {
@@ -21928,6 +21588,12 @@ jQuery.each( { focus: "focusin", blur: "focusout" }, function( type, delegateTyp
 
 			// Return non-false to allow normal event-path propagation
 			return true;
+		},
+
+		// Suppress native focus or blur if we're currently inside
+		// a leveraged native-event stack
+		_default: function( event ) {
+			return dataPriv.get( event.target, type );
 		},
 
 		delegateType: delegateType
@@ -22026,7 +21692,8 @@ var
 
 	// checked="checked" or checked
 	rchecked = /checked\s*(?:[^=]|=\s*.checked.)/i,
-	rcleanScript = /^\s*<!(?:\[CDATA\[|--)|(?:\]\]|--)>\s*$/g;
+
+	rcleanScript = /^\s*<!\[CDATA\[|\]\]>\s*$/g;
 
 // Prefer a tbody over its parent table for containing new rows
 function manipulationTarget( elem, content ) {
@@ -22140,7 +21807,7 @@ function domManip( collection, args, callback, ignored ) {
 
 			// Use the original fragment for the last item
 			// instead of the first because it can end up
-			// being emptied incorrectly in certain situations (#8070).
+			// being emptied incorrectly in certain situations (trac-8070).
 			for ( ; i < l; i++ ) {
 				node = fragment;
 
@@ -22181,6 +21848,12 @@ function domManip( collection, args, callback, ignored ) {
 								}, doc );
 							}
 						} else {
+
+							// Unwrap a CDATA section containing script contents. This shouldn't be
+							// needed as in XML documents they're already not visible when
+							// inspecting element contents and in HTML documents they have no
+							// meaning but we're preserving that logic for backwards compatibility.
+							// This will be removed completely in 4.0. See gh-4904.
 							DOMEval( node.textContent.replace( rcleanScript, "" ), node, doc );
 						}
 					}
@@ -22463,9 +22136,12 @@ jQuery.each( {
 } );
 var rnumnonpx = new RegExp( "^(" + pnum + ")(?!px)[a-z%]+$", "i" );
 
+var rcustomProp = /^--/;
+
+
 var getStyles = function( elem ) {
 
-		// Support: IE <=11 only, Firefox <=30 (#15098, #14150)
+		// Support: IE <=11 only, Firefox <=30 (trac-15098, trac-14150)
 		// IE throws on elements created in popups
 		// FF meanwhile throws on frame elements through "defaultView.getComputedStyle"
 		var view = elem.ownerDocument.defaultView;
@@ -22499,6 +22175,15 @@ var swap = function( elem, options, callback ) {
 
 
 var rboxStyle = new RegExp( cssExpand.join( "|" ), "i" );
+
+var whitespace = "[\\x20\\t\\r\\n\\f]";
+
+
+var rtrimCSS = new RegExp(
+	"^" + whitespace + "+|((?:^|[^\\\\])(?:\\\\.)*)" + whitespace + "+$",
+	"g"
+);
+
 
 
 
@@ -22565,7 +22250,7 @@ var rboxStyle = new RegExp( cssExpand.join( "|" ), "i" );
 	}
 
 	// Support: IE <=9 - 11 only
-	// Style of cloned element affects source element cloned (#8908)
+	// Style of cloned element affects source element cloned (trac-8908)
 	div.style.backgroundClip = "content-box";
 	div.cloneNode( true ).style.backgroundClip = "";
 	support.clearCloneStyle = div.style.backgroundClip === "content-box";
@@ -22597,6 +22282,10 @@ var rboxStyle = new RegExp( cssExpand.join( "|" ), "i" );
 		// set in CSS while `offset*` properties report correct values.
 		// Behavior in IE 9 is more subtle than in newer versions & it passes
 		// some versions of this test; make sure not to make it pass there!
+		//
+		// Support: Firefox 70+
+		// Only Firefox includes border widths
+		// in computed dimensions. (gh-4529)
 		reliableTrDimensions: function() {
 			var table, tr, trChild, trStyle;
 			if ( reliableTrDimensionsVal == null ) {
@@ -22604,9 +22293,22 @@ var rboxStyle = new RegExp( cssExpand.join( "|" ), "i" );
 				tr = document.createElement( "tr" );
 				trChild = document.createElement( "div" );
 
-				table.style.cssText = "position:absolute;left:-11111px";
+				table.style.cssText = "position:absolute;left:-11111px;border-collapse:separate";
+				tr.style.cssText = "border:1px solid";
+
+				// Support: Chrome 86+
+				// Height set through cssText does not get applied.
+				// Computed height then comes back as 0.
 				tr.style.height = "1px";
 				trChild.style.height = "9px";
+
+				// Support: Android 8 Chrome 86+
+				// In our bodyBackground.html iframe,
+				// display for all div elements is set to "inline",
+				// which causes a problem only in Android 8 Chrome 86.
+				// Ensuring the div is display: block
+				// gets around this issue.
+				trChild.style.display = "block";
 
 				documentElement
 					.appendChild( table )
@@ -22614,7 +22316,9 @@ var rboxStyle = new RegExp( cssExpand.join( "|" ), "i" );
 					.appendChild( trChild );
 
 				trStyle = window.getComputedStyle( tr );
-				reliableTrDimensionsVal = parseInt( trStyle.height ) > 3;
+				reliableTrDimensionsVal = ( parseInt( trStyle.height, 10 ) +
+					parseInt( trStyle.borderTopWidth, 10 ) +
+					parseInt( trStyle.borderBottomWidth, 10 ) ) === tr.offsetHeight;
 
 				documentElement.removeChild( table );
 			}
@@ -22626,6 +22330,7 @@ var rboxStyle = new RegExp( cssExpand.join( "|" ), "i" );
 
 function curCSS( elem, name, computed ) {
 	var width, minWidth, maxWidth, ret,
+		isCustomProp = rcustomProp.test( name ),
 
 		// Support: Firefox 51+
 		// Retrieving style before computed somehow
@@ -22636,10 +22341,21 @@ function curCSS( elem, name, computed ) {
 	computed = computed || getStyles( elem );
 
 	// getPropertyValue is needed for:
-	//   .css('filter') (IE 9 only, #12537)
-	//   .css('--customProperty) (#3144)
+	//   .css('filter') (IE 9 only, trac-12537)
+	//   .css('--customProperty) (gh-3144)
 	if ( computed ) {
 		ret = computed.getPropertyValue( name ) || computed[ name ];
+
+		// trim whitespace for custom property (issue gh-4926)
+		if ( isCustomProp ) {
+
+			// rtrim treats U+000D CARRIAGE RETURN and U+000C FORM FEED
+			// as whitespace while CSS does not, but this is not a problem
+			// because CSS preprocessing replaces them with U+000A LINE FEED
+			// (which *is* CSS whitespace)
+			// https://www.w3.org/TR/css-syntax-3/#input-preprocessing
+			ret = ret.replace( rtrimCSS, "$1" );
+		}
 
 		if ( ret === "" && !isAttached( elem ) ) {
 			ret = jQuery.style( elem, name );
@@ -22736,7 +22452,6 @@ var
 	// except "table", "table-cell", or "table-caption"
 	// See here for display values: https://developer.mozilla.org/en-US/docs/CSS/display
 	rdisplayswap = /^(none|table(?!-c[ea]).+)/,
-	rcustomProp = /^--/,
 	cssShow = { position: "absolute", visibility: "hidden", display: "block" },
 	cssNormalTransform = {
 		letterSpacing: "0",
@@ -22972,15 +22687,15 @@ jQuery.extend( {
 		if ( value !== undefined ) {
 			type = typeof value;
 
-			// Convert "+=" or "-=" to relative numbers (#7345)
+			// Convert "+=" or "-=" to relative numbers (trac-7345)
 			if ( type === "string" && ( ret = rcssNum.exec( value ) ) && ret[ 1 ] ) {
 				value = adjustCSS( elem, name, ret );
 
-				// Fixes bug #9237
+				// Fixes bug trac-9237
 				type = "number";
 			}
 
-			// Make sure that null and NaN values aren't set (#7116)
+			// Make sure that null and NaN values aren't set (trac-7116)
 			if ( value == null || value !== value ) {
 				return;
 			}
@@ -23078,10 +22793,10 @@ jQuery.each( [ "height", "width" ], function( _i, dimension ) {
 					// Running getBoundingClientRect on a disconnected node
 					// in IE throws an error.
 					( !elem.getClientRects().length || !elem.getBoundingClientRect().width ) ?
-						swap( elem, cssShow, function() {
-							return getWidthOrHeight( elem, dimension, extra );
-						} ) :
-						getWidthOrHeight( elem, dimension, extra );
+					swap( elem, cssShow, function() {
+						return getWidthOrHeight( elem, dimension, extra );
+					} ) :
+					getWidthOrHeight( elem, dimension, extra );
 			}
 		},
 
@@ -23140,7 +22855,7 @@ jQuery.cssHooks.marginLeft = addGetHookIf( support.reliableMarginLeft,
 					swap( elem, { marginLeft: 0 }, function() {
 						return elem.getBoundingClientRect().left;
 					} )
-				) + "px";
+			) + "px";
 		}
 	}
 );
@@ -23279,7 +22994,7 @@ Tween.propHooks = {
 			if ( jQuery.fx.step[ tween.prop ] ) {
 				jQuery.fx.step[ tween.prop ]( tween );
 			} else if ( tween.elem.nodeType === 1 && (
-					jQuery.cssHooks[ tween.prop ] ||
+				jQuery.cssHooks[ tween.prop ] ||
 					tween.elem.style[ finalPropName( tween.prop ) ] != null ) ) {
 				jQuery.style( tween.elem, tween.prop, tween.now + tween.unit );
 			} else {
@@ -23524,7 +23239,7 @@ function defaultPrefilter( elem, props, opts ) {
 
 			anim.done( function() {
 
-			/* eslint-enable no-loop-func */
+				/* eslint-enable no-loop-func */
 
 				// The final step of a "hide" animation is actually hiding the element
 				if ( !hidden ) {
@@ -23604,7 +23319,7 @@ function Animation( elem, properties, options ) {
 				remaining = Math.max( 0, animation.startTime + animation.duration - currentTime ),
 
 				// Support: Android 2.3 only
-				// Archaic crash bug won't allow us to use `1 - ( 0.5 || 0 )` (#12497)
+				// Archaic crash bug won't allow us to use `1 - ( 0.5 || 0 )` (trac-12497)
 				temp = remaining / animation.duration || 0,
 				percent = 1 - temp,
 				index = 0,
@@ -23644,7 +23359,7 @@ function Animation( elem, properties, options ) {
 			tweens: [],
 			createTween: function( prop, end ) {
 				var tween = jQuery.Tween( elem, animation.opts, prop, end,
-						animation.opts.specialEasing[ prop ] || animation.opts.easing );
+					animation.opts.specialEasing[ prop ] || animation.opts.easing );
 				animation.tweens.push( tween );
 				return tween;
 			},
@@ -23817,7 +23532,8 @@ jQuery.fn.extend( {
 					anim.stop( true );
 				}
 			};
-			doAnimation.finish = doAnimation;
+
+		doAnimation.finish = doAnimation;
 
 		return empty || optall.queue === false ?
 			this.each( doAnimation ) :
@@ -23993,7 +23709,6 @@ jQuery.fx.speeds = {
 
 
 // Based off of the plugin by Clint Helfers, with permission.
-// https://web.archive.org/web/20100324014747/http://blindsignals.com/index.php/2009/07/jquery-delay/
 jQuery.fn.delay = function( time, type ) {
 	time = jQuery.fx ? jQuery.fx.speeds[ time ] || time : time;
 	type = type || "fx";
@@ -24218,8 +23933,7 @@ jQuery.extend( {
 				// Support: IE <=9 - 11 only
 				// elem.tabIndex doesn't always return the
 				// correct value when it hasn't been explicitly set
-				// https://web.archive.org/web/20141116233347/http://fluidproject.org/blog/2008/01/09/getting-setting-and-removing-tabindex-values-with-javascript/
-				// Use proper attribute retrieval(#12072)
+				// Use proper attribute retrieval (trac-12072)
 				var tabindex = jQuery.find.attr( elem, "tabindex" );
 
 				if ( tabindex ) {
@@ -24323,8 +24037,7 @@ function classesToArray( value ) {
 
 jQuery.fn.extend( {
 	addClass: function( value ) {
-		var classes, elem, cur, curValue, clazz, j, finalValue,
-			i = 0;
+		var classNames, cur, curValue, className, i, finalValue;
 
 		if ( isFunction( value ) ) {
 			return this.each( function( j ) {
@@ -24332,36 +24045,35 @@ jQuery.fn.extend( {
 			} );
 		}
 
-		classes = classesToArray( value );
+		classNames = classesToArray( value );
 
-		if ( classes.length ) {
-			while ( ( elem = this[ i++ ] ) ) {
-				curValue = getClass( elem );
-				cur = elem.nodeType === 1 && ( " " + stripAndCollapse( curValue ) + " " );
+		if ( classNames.length ) {
+			return this.each( function() {
+				curValue = getClass( this );
+				cur = this.nodeType === 1 && ( " " + stripAndCollapse( curValue ) + " " );
 
 				if ( cur ) {
-					j = 0;
-					while ( ( clazz = classes[ j++ ] ) ) {
-						if ( cur.indexOf( " " + clazz + " " ) < 0 ) {
-							cur += clazz + " ";
+					for ( i = 0; i < classNames.length; i++ ) {
+						className = classNames[ i ];
+						if ( cur.indexOf( " " + className + " " ) < 0 ) {
+							cur += className + " ";
 						}
 					}
 
 					// Only assign if different to avoid unneeded rendering.
 					finalValue = stripAndCollapse( cur );
 					if ( curValue !== finalValue ) {
-						elem.setAttribute( "class", finalValue );
+						this.setAttribute( "class", finalValue );
 					}
 				}
-			}
+			} );
 		}
 
 		return this;
 	},
 
 	removeClass: function( value ) {
-		var classes, elem, cur, curValue, clazz, j, finalValue,
-			i = 0;
+		var classNames, cur, curValue, className, i, finalValue;
 
 		if ( isFunction( value ) ) {
 			return this.each( function( j ) {
@@ -24373,44 +24085,41 @@ jQuery.fn.extend( {
 			return this.attr( "class", "" );
 		}
 
-		classes = classesToArray( value );
+		classNames = classesToArray( value );
 
-		if ( classes.length ) {
-			while ( ( elem = this[ i++ ] ) ) {
-				curValue = getClass( elem );
+		if ( classNames.length ) {
+			return this.each( function() {
+				curValue = getClass( this );
 
 				// This expression is here for better compressibility (see addClass)
-				cur = elem.nodeType === 1 && ( " " + stripAndCollapse( curValue ) + " " );
+				cur = this.nodeType === 1 && ( " " + stripAndCollapse( curValue ) + " " );
 
 				if ( cur ) {
-					j = 0;
-					while ( ( clazz = classes[ j++ ] ) ) {
+					for ( i = 0; i < classNames.length; i++ ) {
+						className = classNames[ i ];
 
 						// Remove *all* instances
-						while ( cur.indexOf( " " + clazz + " " ) > -1 ) {
-							cur = cur.replace( " " + clazz + " ", " " );
+						while ( cur.indexOf( " " + className + " " ) > -1 ) {
+							cur = cur.replace( " " + className + " ", " " );
 						}
 					}
 
 					// Only assign if different to avoid unneeded rendering.
 					finalValue = stripAndCollapse( cur );
 					if ( curValue !== finalValue ) {
-						elem.setAttribute( "class", finalValue );
+						this.setAttribute( "class", finalValue );
 					}
 				}
-			}
+			} );
 		}
 
 		return this;
 	},
 
 	toggleClass: function( value, stateVal ) {
-		var type = typeof value,
+		var classNames, className, i, self,
+			type = typeof value,
 			isValidValue = type === "string" || Array.isArray( value );
-
-		if ( typeof stateVal === "boolean" && isValidValue ) {
-			return stateVal ? this.addClass( value ) : this.removeClass( value );
-		}
 
 		if ( isFunction( value ) ) {
 			return this.each( function( i ) {
@@ -24421,17 +24130,20 @@ jQuery.fn.extend( {
 			} );
 		}
 
-		return this.each( function() {
-			var className, i, self, classNames;
+		if ( typeof stateVal === "boolean" && isValidValue ) {
+			return stateVal ? this.addClass( value ) : this.removeClass( value );
+		}
 
+		classNames = classesToArray( value );
+
+		return this.each( function() {
 			if ( isValidValue ) {
 
 				// Toggle individual class names
-				i = 0;
 				self = jQuery( this );
-				classNames = classesToArray( value );
 
-				while ( ( className = classNames[ i++ ] ) ) {
+				for ( i = 0; i < classNames.length; i++ ) {
+					className = classNames[ i ];
 
 					// Check each className given, space separated list
 					if ( self.hasClass( className ) ) {
@@ -24457,8 +24169,8 @@ jQuery.fn.extend( {
 				if ( this.setAttribute ) {
 					this.setAttribute( "class",
 						className || value === false ?
-						"" :
-						dataPriv.get( this, "__className__" ) || ""
+							"" :
+							dataPriv.get( this, "__className__" ) || ""
 					);
 				}
 			}
@@ -24473,7 +24185,7 @@ jQuery.fn.extend( {
 		while ( ( elem = this[ i++ ] ) ) {
 			if ( elem.nodeType === 1 &&
 				( " " + stripAndCollapse( getClass( elem ) ) + " " ).indexOf( className ) > -1 ) {
-					return true;
+				return true;
 			}
 		}
 
@@ -24565,7 +24277,7 @@ jQuery.extend( {
 					val :
 
 					// Support: IE <=10 - 11 only
-					// option.text throws exceptions (#14686, #14858)
+					// option.text throws exceptions (trac-14686, trac-14858)
 					// Strip and collapse whitespace
 					// https://html.spec.whatwg.org/#strip-and-collapse-whitespace
 					stripAndCollapse( jQuery.text( elem ) );
@@ -24592,7 +24304,7 @@ jQuery.extend( {
 					option = options[ i ];
 
 					// Support: IE <=9 only
-					// IE8-9 doesn't update selected after form reset (#2551)
+					// IE8-9 doesn't update selected after form reset (trac-2551)
 					if ( ( option.selected || i === index ) &&
 
 							// Don't return options that are disabled or in a disabled optgroup
@@ -24735,8 +24447,8 @@ jQuery.extend( jQuery.event, {
 			return;
 		}
 
-		// Determine event propagation path in advance, per W3C events spec (#9951)
-		// Bubble up to document, then to window; watch for a global ownerDocument var (#9724)
+		// Determine event propagation path in advance, per W3C events spec (trac-9951)
+		// Bubble up to document, then to window; watch for a global ownerDocument var (trac-9724)
 		if ( !onlyHandlers && !special.noBubble && !isWindow( elem ) ) {
 
 			bubbleType = special.delegateType || type;
@@ -24763,9 +24475,7 @@ jQuery.extend( jQuery.event, {
 				special.bindType || type;
 
 			// jQuery handler
-			handle = (
-					dataPriv.get( cur, "events" ) || Object.create( null )
-				)[ event.type ] &&
+			handle = ( dataPriv.get( cur, "events" ) || Object.create( null ) )[ event.type ] &&
 				dataPriv.get( cur, "handle" );
 			if ( handle ) {
 				handle.apply( cur, data );
@@ -24790,7 +24500,7 @@ jQuery.extend( jQuery.event, {
 				acceptData( elem ) ) {
 
 				// Call a native DOM method on the target with the same name as the event.
-				// Don't do default actions on window, that's where global variables be (#6170)
+				// Don't do default actions on window, that's where global variables be (trac-6170)
 				if ( ontype && isFunction( elem[ type ] ) && !isWindow( elem ) ) {
 
 					// Don't re-trigger an onFOO event when we call its FOO() method
@@ -24912,7 +24622,7 @@ var rquery = ( /\?/ );
 
 // Cross-browser xml parsing
 jQuery.parseXML = function( data ) {
-	var xml;
+	var xml, parserErrorElem;
 	if ( !data || typeof data !== "string" ) {
 		return null;
 	}
@@ -24921,12 +24631,17 @@ jQuery.parseXML = function( data ) {
 	// IE throws on parseFromString with invalid input.
 	try {
 		xml = ( new window.DOMParser() ).parseFromString( data, "text/xml" );
-	} catch ( e ) {
-		xml = undefined;
-	}
+	} catch ( e ) {}
 
-	if ( !xml || xml.getElementsByTagName( "parsererror" ).length ) {
-		jQuery.error( "Invalid XML: " + data );
+	parserErrorElem = xml && xml.getElementsByTagName( "parsererror" )[ 0 ];
+	if ( !xml || parserErrorElem ) {
+		jQuery.error( "Invalid XML: " + (
+			parserErrorElem ?
+				jQuery.map( parserErrorElem.childNodes, function( el ) {
+					return el.textContent;
+				} ).join( "\n" ) :
+				data
+		) );
 	}
 	return xml;
 };
@@ -25027,16 +24742,14 @@ jQuery.fn.extend( {
 			// Can add propHook for "elements" to filter or add form elements
 			var elements = jQuery.prop( this, "elements" );
 			return elements ? jQuery.makeArray( elements ) : this;
-		} )
-		.filter( function() {
+		} ).filter( function() {
 			var type = this.type;
 
 			// Use .is( ":disabled" ) so that fieldset[disabled] works
 			return this.name && !jQuery( this ).is( ":disabled" ) &&
 				rsubmittable.test( this.nodeName ) && !rsubmitterTypes.test( type ) &&
 				( this.checked || !rcheckableType.test( type ) );
-		} )
-		.map( function( _i, elem ) {
+		} ).map( function( _i, elem ) {
 			var val = jQuery( this ).val();
 
 			if ( val == null ) {
@@ -25061,7 +24774,7 @@ var
 	rantiCache = /([?&])_=[^&]*/,
 	rheaders = /^(.*?):[ \t]*([^\r\n]*)$/mg,
 
-	// #7653, #8125, #8152: local protocol detection
+	// trac-7653, trac-8125, trac-8152: local protocol detection
 	rlocalProtocol = /^(?:about|app|app-storage|.+-extension|file|res|widget):$/,
 	rnoContent = /^(?:GET|HEAD)$/,
 	rprotocol = /^\/\//,
@@ -25084,12 +24797,13 @@ var
 	 */
 	transports = {},
 
-	// Avoid comment-prolog char sequence (#10098); must appease lint and evade compression
+	// Avoid comment-prolog char sequence (trac-10098); must appease lint and evade compression
 	allTypes = "*/".concat( "*" ),
 
 	// Anchor tag for parsing the document origin
 	originAnchor = document.createElement( "a" );
-	originAnchor.href = location.href;
+
+originAnchor.href = location.href;
 
 // Base "constructor" for jQuery.ajaxPrefilter and jQuery.ajaxTransport
 function addToPrefiltersOrTransports( structure ) {
@@ -25154,7 +24868,7 @@ function inspectPrefiltersOrTransports( structure, options, originalOptions, jqX
 
 // A special extend for ajax options
 // that takes "flat" options (not to be deep extended)
-// Fixes #9887
+// Fixes trac-9887
 function ajaxExtend( target, src ) {
 	var key, deep,
 		flatOptions = jQuery.ajaxSettings.flatOptions || {};
@@ -25470,8 +25184,8 @@ jQuery.extend( {
 			// Context for global events is callbackContext if it is a DOM node or jQuery collection
 			globalEventContext = s.context &&
 				( callbackContext.nodeType || callbackContext.jquery ) ?
-					jQuery( callbackContext ) :
-					jQuery.event,
+				jQuery( callbackContext ) :
+				jQuery.event,
 
 			// Deferreds
 			deferred = jQuery.Deferred(),
@@ -25565,12 +25279,12 @@ jQuery.extend( {
 		deferred.promise( jqXHR );
 
 		// Add protocol if not provided (prefilters might expect it)
-		// Handle falsy url in the settings object (#10093: consistency with old signature)
+		// Handle falsy url in the settings object (trac-10093: consistency with old signature)
 		// We also use the url parameter if available
 		s.url = ( ( url || s.url || location.href ) + "" )
 			.replace( rprotocol, location.protocol + "//" );
 
-		// Alias method option to type as per ticket #12004
+		// Alias method option to type as per ticket trac-12004
 		s.type = options.method || options.type || s.method || s.type;
 
 		// Extract dataTypes list
@@ -25613,7 +25327,7 @@ jQuery.extend( {
 		}
 
 		// We can fire global events as of now if asked to
-		// Don't fire events if jQuery.event is undefined in an AMD-usage scenario (#15118)
+		// Don't fire events if jQuery.event is undefined in an AMD-usage scenario (trac-15118)
 		fireGlobals = jQuery.event && s.global;
 
 		// Watch for a new set of requests
@@ -25642,7 +25356,7 @@ jQuery.extend( {
 			if ( s.data && ( s.processData || typeof s.data === "string" ) ) {
 				cacheURL += ( rquery.test( cacheURL ) ? "&" : "?" ) + s.data;
 
-				// #9682: remove data so that it's not used in an eventual retry
+				// trac-9682: remove data so that it's not used in an eventual retry
 				delete s.data;
 			}
 
@@ -25783,8 +25497,10 @@ jQuery.extend( {
 				response = ajaxHandleResponses( s, jqXHR, responses );
 			}
 
-			// Use a noop converter for missing script
-			if ( !isSuccess && jQuery.inArray( "script", s.dataTypes ) > -1 ) {
+			// Use a noop converter for missing script but not if jsonp
+			if ( !isSuccess &&
+				jQuery.inArray( "script", s.dataTypes ) > -1 &&
+				jQuery.inArray( "json", s.dataTypes ) < 0 ) {
 				s.converters[ "text script" ] = function() {};
 			}
 
@@ -25913,7 +25629,7 @@ jQuery._evalUrl = function( url, options, doc ) {
 	return jQuery.ajax( {
 		url: url,
 
-		// Make this explicit, since user can override this through ajaxSetup (#11264)
+		// Make this explicit, since user can override this through ajaxSetup (trac-11264)
 		type: "GET",
 		dataType: "script",
 		cache: true,
@@ -26022,7 +25738,7 @@ var xhrSuccessStatus = {
 		0: 200,
 
 		// Support: IE <=9 only
-		// #1450: sometimes IE returns 1223 when it should be 204
+		// trac-1450: sometimes IE returns 1223 when it should be 204
 		1223: 204
 	},
 	xhrSupported = jQuery.ajaxSettings.xhr();
@@ -26094,7 +25810,7 @@ jQuery.ajaxTransport( function( options ) {
 								} else {
 									complete(
 
-										// File: protocol always yields status 0; see #8605, #14207
+										// File: protocol always yields status 0; see trac-8605, trac-14207
 										xhr.status,
 										xhr.statusText
 									);
@@ -26155,7 +25871,7 @@ jQuery.ajaxTransport( function( options ) {
 					xhr.send( options.hasContent && options.data || null );
 				} catch ( e ) {
 
-					// #14683: Only rethrow if this hasn't been notified as an error yet
+					// trac-14683: Only rethrow if this hasn't been notified as an error yet
 					if ( callback ) {
 						throw e;
 					}
@@ -26522,12 +26238,6 @@ jQuery.offset = {
 			options.using.call( elem, props );
 
 		} else {
-			if ( typeof props.top === "number" ) {
-				props.top += "px";
-			}
-			if ( typeof props.left === "number" ) {
-				props.left += "px";
-			}
 			curElem.css( props );
 		}
 	}
@@ -26696,8 +26406,11 @@ jQuery.each( [ "top", "left" ], function( _i, prop ) {
 
 // Create innerHeight, innerWidth, height, width, outerHeight and outerWidth methods
 jQuery.each( { Height: "height", Width: "width" }, function( name, type ) {
-	jQuery.each( { padding: "inner" + name, content: type, "": "outer" + name },
-		function( defaultExtra, funcName ) {
+	jQuery.each( {
+		padding: "inner" + name,
+		content: type,
+		"": "outer" + name
+	}, function( defaultExtra, funcName ) {
 
 		// Margin is only for outerHeight, outerWidth
 		jQuery.fn[ funcName ] = function( margin, value ) {
@@ -26782,7 +26495,8 @@ jQuery.fn.extend( {
 	}
 } );
 
-jQuery.each( ( "blur focus focusin focusout resize scroll click dblclick " +
+jQuery.each(
+	( "blur focus focusin focusout resize scroll click dblclick " +
 	"mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave " +
 	"change select submit keydown keypress keyup contextmenu" ).split( " " ),
 	function( _i, name ) {
@@ -26793,14 +26507,17 @@ jQuery.each( ( "blur focus focusin focusout resize scroll click dblclick " +
 				this.on( name, null, data, fn ) :
 				this.trigger( name );
 		};
-	} );
+	}
+);
 
 
 
 
 // Support: Android <=4.0 only
 // Make sure we trim BOM and NBSP
-var rtrim = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
+// Require that the "whitespace run" starts from a non-whitespace
+// to avoid O(N^2) behavior when the engine would try matching "\s+$" at each space position.
+var rtrim = /^[\s\uFEFF\xA0]+|([^\s\uFEFF\xA0])[\s\uFEFF\xA0]+$/g;
 
 // Bind a function to a context, optionally partially applying any
 // arguments.
@@ -26867,7 +26584,7 @@ jQuery.isNumeric = function( obj ) {
 jQuery.trim = function( text ) {
 	return text == null ?
 		"" :
-		( text + "" ).replace( rtrim, "" );
+		( text + "" ).replace( rtrim, "$1" );
 };
 
 
@@ -26915,8 +26632,8 @@ jQuery.noConflict = function( deep ) {
 };
 
 // Expose jQuery and $ identifiers, even in AMD
-// (#7102#comment:10, https://github.com/jquery/jquery/pull/557)
-// and CommonJS for browser emulators (#13566)
+// (trac-7102#comment:10, https://github.com/jquery/jquery/pull/557)
+// and CommonJS for browser emulators (trac-13566)
 if ( typeof noGlobal === "undefined" ) {
 	window.jQuery = window.$ = jQuery;
 }
@@ -26943,14 +26660,15 @@ return jQuery;
   var undefined;
 
   /** Used as the semantic version number. */
-  var VERSION = '4.17.20';
+  var VERSION = '4.17.21';
 
   /** Used as the size to enable large array optimizations. */
   var LARGE_ARRAY_SIZE = 200;
 
   /** Error message constants. */
   var CORE_ERROR_TEXT = 'Unsupported core-js use. Try https://npms.io/search?q=ponyfill.',
-      FUNC_ERROR_TEXT = 'Expected a function';
+      FUNC_ERROR_TEXT = 'Expected a function',
+      INVALID_TEMPL_VAR_ERROR_TEXT = 'Invalid `variable` option passed into `_.template`';
 
   /** Used to stand-in for `undefined` hash values. */
   var HASH_UNDEFINED = '__lodash_hash_undefined__';
@@ -27083,10 +26801,11 @@ return jQuery;
   var reRegExpChar = /[\\^$.*+?()[\]{}|]/g,
       reHasRegExpChar = RegExp(reRegExpChar.source);
 
-  /** Used to match leading and trailing whitespace. */
-  var reTrim = /^\s+|\s+$/g,
-      reTrimStart = /^\s+/,
-      reTrimEnd = /\s+$/;
+  /** Used to match leading whitespace. */
+  var reTrimStart = /^\s+/;
+
+  /** Used to match a single whitespace character. */
+  var reWhitespace = /\s/;
 
   /** Used to match wrap detail comments. */
   var reWrapComment = /\{(?:\n\/\* \[wrapped with .+\] \*\/)?\n?/,
@@ -27095,6 +26814,18 @@ return jQuery;
 
   /** Used to match words composed of alphanumeric characters. */
   var reAsciiWord = /[^\x00-\x2f\x3a-\x40\x5b-\x60\x7b-\x7f]+/g;
+
+  /**
+   * Used to validate the `validate` option in `_.template` variable.
+   *
+   * Forbids characters which could potentially change the meaning of the function argument definition:
+   * - "()," (modification of function parameters)
+   * - "=" (default value)
+   * - "[]{}" (destructuring of function parameters)
+   * - "/" (beginning of a comment)
+   * - whitespace
+   */
+  var reForbiddenIdentifierChars = /[()=,{}\[\]\/\s]/;
 
   /** Used to match backslashes in property paths. */
   var reEscapeChar = /\\(\\)?/g;
@@ -27925,6 +27656,19 @@ return jQuery;
   }
 
   /**
+   * The base implementation of `_.trim`.
+   *
+   * @private
+   * @param {string} string The string to trim.
+   * @returns {string} Returns the trimmed string.
+   */
+  function baseTrim(string) {
+    return string
+      ? string.slice(0, trimmedEndIndex(string) + 1).replace(reTrimStart, '')
+      : string;
+  }
+
+  /**
    * The base implementation of `_.unary` without support for storing metadata.
    *
    * @private
@@ -28255,6 +27999,21 @@ return jQuery;
     return hasUnicode(string)
       ? unicodeToArray(string)
       : asciiToArray(string);
+  }
+
+  /**
+   * Used by `_.trim` and `_.trimEnd` to get the index of the last non-whitespace
+   * character of `string`.
+   *
+   * @private
+   * @param {string} string The string to inspect.
+   * @returns {number} Returns the index of the last non-whitespace character.
+   */
+  function trimmedEndIndex(string) {
+    var index = string.length;
+
+    while (index-- && reWhitespace.test(string.charAt(index))) {}
+    return index;
   }
 
   /**
@@ -39425,7 +39184,7 @@ return jQuery;
       if (typeof value != 'string') {
         return value === 0 ? value : +value;
       }
-      value = value.replace(reTrim, '');
+      value = baseTrim(value);
       var isBinary = reIsBinary.test(value);
       return (isBinary || reIsOctal.test(value))
         ? freeParseInt(value.slice(2), isBinary ? 2 : 8)
@@ -41797,6 +41556,12 @@ return jQuery;
       if (!variable) {
         source = 'with (obj) {\n' + source + '\n}\n';
       }
+      // Throw an error if a forbidden character was found in `variable`, to prevent
+      // potential command injection attacks.
+      else if (reForbiddenIdentifierChars.test(variable)) {
+        throw new Error(INVALID_TEMPL_VAR_ERROR_TEXT);
+      }
+
       // Cleanup code by stripping empty strings.
       source = (isEvaluating ? source.replace(reEmptyStringLeading, '') : source)
         .replace(reEmptyStringMiddle, '$1')
@@ -41910,7 +41675,7 @@ return jQuery;
     function trim(string, chars, guard) {
       string = toString(string);
       if (string && (guard || chars === undefined)) {
-        return string.replace(reTrim, '');
+        return baseTrim(string);
       }
       if (!string || !(chars = baseToString(chars))) {
         return string;
@@ -41945,7 +41710,7 @@ return jQuery;
     function trimEnd(string, chars, guard) {
       string = toString(string);
       if (string && (guard || chars === undefined)) {
-        return string.replace(reTrimEnd, '');
+        return string.slice(0, trimmedEndIndex(string) + 1);
       }
       if (!string || !(chars = baseToString(chars))) {
         return string;
@@ -44348,17 +44113,369 @@ function pug_rethrow(err, filename, lineno, str){
   throw err;
 };
 
-},{"fs":11}],9:[function(require,module,exports){
+},{"fs":12}],9:[function(require,module,exports){
+module.exports={
+  "groups": [
+    {
+      "title": "HCM Questions",
+      "questions": [
+        [
+          {
+            "id": "hcm0.0",
+            "question": "Does this letter mention hypertrophic cardiomyopathy?",
+            "responses": [ "yes", "no", "not sure" ]
+          },
+          {
+            "id": "hcm0.1",
+            "question": "Does this letter say that the patient has HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "hcm0.0", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "hcm0.2",
+            "question": "Does this letter say that the patient does not have HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "no" ] }
+            ]
+          }
+        ]
+      ]
+    },
+    { 
+      "title": "Screening Questions",
+      "questions": [
+        [
+          {
+            "id": "sm0.0",
+            "question": "Does this letter mention screening?",
+            "responses": [ "yes", "no", "not sure" ],
+            "askif": [
+              { "id": "hcm0.0", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm0.1",
+            "question": "Does this letter say that the patient has been screened, or is being screened, for HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "sm0.0", "response": [ "yes" ] }
+            ]
+          }
+        ], [
+          {
+            "id": "sm1.0",
+            "question": "Does this letter mention family history of HCM?",
+            "responses": [ "yes", "no", "not sure" ]
+          }, 
+          {
+            "id": "sm1.1",
+            "question": "Does this letter say that the patient has a family history of HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "sm1.0", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm1.2",
+            "question": "Does the letter mention the genetic status of an affected family member?",
+            "responses": [ "yes", "no", "not sure" ],
+            "askif": [
+              { "id": "sm1.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm1.3",
+            "question": "Does this letter say that an affected family member is either: gene-positive and carrying a likely pathogenic mutation, or gene negative and carries a VUS?",
+            "responses": [ "yes", "no", "not sure" ],
+            "askif": [
+              { "id": "sm1.2", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm1.4",
+            "question": "Is the gene specified?",
+            "responses": [ "[INPUT]", "no" ],
+            "askif": [
+              { "id": "sm1.3", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm1.5",
+            "question": "Does the letter state whether the affected family member is phenotype positive or negative?",
+            "responses": [ "positive", "negative", "unmentioned" ],
+            "askif": [
+              { "id": "sm1.1", "response": [ "yes" ] }
+            ]
+          }
+        ], [
+          {
+            "id": "sm2.0",
+            "question": "Does this letter mention family history of sudden cardiac death?",
+            "responses": [ "yes", "no", "not sure" ]
+          },
+          {
+            "id": "sm2.1",
+            "question": "Does this letter say that the person has a family history of sudden cardiac death?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "sm2.0", "response": [ "yes" ] }
+            ]
+          }
+        ], [
+          {
+            "id": "sm3.0",
+            "question": "Does this letter mention the patient's genetic status?",
+            "responses": [ "yes", "no", "not sure" ]
+          },
+          {
+            "id": "sm3.1",
+            "question": "Does this letter say that the person is gene-positive for HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "sm3.0", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm3.2",
+            "question": "Does this letter say that the person is gene-negative for HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "sm3.1", "response": [ "no" ] }
+            ]
+          },
+          {
+            "id": "sm3.3",
+            "question": "Is the gene specified?",
+            "responses": [ "[INPUT]", "no" ],
+            "askif": [
+              { "id": "sm3.2", "response": [ "yes" ] }
+            ]
+          }
+        ]
+      ]
+    }, 
+    { 
+      "title": "Sudden Death Scoring",
+      "questions": [
+        [
+          {
+            "id": "scd0.0",
+            "question": "What is the wall thickness (in MM)?",
+            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.1",
+            "question": "Is there a history of unexplained syncope?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.2",
+            "question": "Is there an LV apical aneurysm?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.3",
+            "question": "Is there extensive scarring on MRI?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.4",
+            "question": "Is there non-sustained VT?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.5",
+            "question": "What is the LA size?",
+            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.6",
+            "question": "What is the maximum LVOT gradient at rest?",
+            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.6",
+            "question": "What is the maximum LVOT gradient with valsalva?",
+            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          }
+        ]
+      ]
+    },
+    { 
+      "title": "Relevant Complications",
+      "questions": [
+        [
+          {
+            "id": "com0.0",
+            "question": "Does the patient have a history of cardiac arrest?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.1",
+            "question": "Does the person have LV impairment (EF<50%)?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.2",
+            "question": "Does the person have heart failure?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.3",
+            "question": "Does the person have atrial fibrillation?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.4",
+            "question": "Does the person have an LVOT obstruction?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          }
+        ]
+      ]
+    },
+    { 
+      "title": "Relevant Interventions",
+      "questions": [
+        [
+          {
+            "id": "rin0.0",
+            "question": "Does the person have a defibrillator?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin0.1",
+            "question": "Have they had appropriate shocks?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "rin0.0", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin0.2",
+            "question": "Have they had inappropriate shocks?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "rin0.0", "response": [ "yes" ] }
+            ]
+          }
+        ],
+        [
+          {
+            "id": "rin1.0",
+            "question": "Does the patient have a pacemaker?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+              "id": "rin1.1",
+            "question": "Does the patient have a CRT?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+              "id": "rin1.2",
+            "question": "Has the person had a heart transplant?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin1.3",
+            "question": "Does the person have an LVAD?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin1.4",
+            "question": "Has the patient had an ablation for atrial fibrillation?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin1.5",
+            "question": "Has the patient had a myectomy?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin1.6",
+            "question": "Has the patient had an alcohol septal ablation?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          }
+        ]
+      ]
+    }
+  ]
+}
+
+},{}],10:[function(require,module,exports){
 var pug = require('pug-runtime');
 module.exports=template;function pug_attr(t,e,n,r){if(!1===e||null==e||!e&&("class"===t||"style"===t))return"";if(!0===e)return" "+(r?t:t+'="'+t+'"');var f=typeof e;return"object"!==f&&"function"!==f||"function"!=typeof e.toJSON||(e=e.toJSON()),"string"==typeof e||(e=JSON.stringify(e),n||-1===e.indexOf('"'))?(n&&(e=pug_escape(e))," "+t+'="'+e+'"'):" "+t+"='"+e.replace(/'/g,"&#39;")+"'"}
 function pug_escape(e){var a=""+e,t=pug_match_html.exec(a);if(!t)return e;var r,c,n,s="";for(r=t.index,c=0;r<a.length;r++){switch(a.charCodeAt(r)){case 34:n="&quot;";break;case 38:n="&amp;";break;case 60:n="&lt;";break;case 62:n="&gt;";break;default:continue}c!==r&&(s+=a.substring(c,r)),c=r+1,s+=n}return c!==r?s+a.substring(c,r):s}
 var pug_match_html=/["&<>]/;
 function pug_rethrow(n,e,r,t){if(!(n instanceof Error))throw n;if(!("undefined"==typeof window&&e||t))throw n.message+=" on line "+r,n;try{t=t||require("fs").readFileSync(e,"utf8")}catch(e){pug_rethrow(n,null,r)}var i=3,a=t.split("\n"),o=Math.max(r-i,0),h=Math.min(a.length,r+i),i=a.slice(o,h).map(function(n,e){var t=e+o+1;return(t==r?"  > ":"    ")+t+"| "+n}).join("\n");throw n.path=e,n.message=(e||"Pug")+":"+r+"\n"+i+"\n\n"+n.message,n}function template(locals) {var pug_html = "", pug_mixins = {}, pug_interp;
-;var locals_for_with = (locals || {});(function (annotations, diagnoses, groupMode, iriLabels, mChecked, nChecked, sid, title, uChecked, uid) {var pug_indent = [];
+;var locals_for_with = (locals || {});(function (questions, uid) {var pug_indent = [];
 
 pug_html = pug_html + "\n\u003Cdiv class=\"container\"\u003E";
-
-var ts = ['self', 'family'];
 
 pug_html = pug_html + "\n  \u003Ch1\u003E";
 
@@ -44370,922 +44487,798 @@ pug_html = pug_html + "Back to list \u003C\u002Fa\u003E\u003C\u002Fh1\u003E";
 
 pug_html = pug_html + "\n  \u003Ch1\u003E";
 
-pug_html = pug_html + "Text-mined entities for ";
+pug_html = pug_html + "Questionairre for ";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fh1\u003E";
 
-// iterate diagnoses
+var gcount = 0 
+
+// iterate questions.groups
 ;(function(){
-  var $$obj = diagnoses;
+  var $$obj = questions.groups;
   if ('number' == typeof $$obj.length) {
-      for (var iri = 0, $$l = $$obj.length; iri < $$l; iri++) {
-        var targets = $$obj[iri];
+      for (var pug_index0 = 0, $$l = $$obj.length; pug_index0 < $$l; pug_index0++) {
+        var g = $$obj[pug_index0];
 
-if (groupMode) {
+pug_html = pug_html + "\n  \u003Ch2\u003E";
 
-pug_html = pug_html + "\n  \u003Ch3\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh2\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = iri) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
-}
-else {
-
-pug_html = pug_html + "\n  \u003Ch3\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = iriLabels[iri]) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
-}
-
-// iterate ts
+// iterate g.questions
 ;(function(){
-  var $$obj = ts;
+  var $$obj = g.questions;
   if ('number' == typeof $$obj.length) {
       for (var pug_index1 = 0, $$l = $$obj.length; pug_index1 < $$l; pug_index1++) {
-        var t = $$obj[pug_index1];
+        var qg = $$obj[pug_index1];
 
-if (targets[t]) {
+gcount++
 
-const a = targets[t]
-
-pug_html = pug_html + "\n  \u003Cp\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = t) ? "" : pug_interp));
-
-pug_html = pug_html + " status: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = a.status) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n  \u003Clabel\u003E";
-
-pug_html = pug_html + "Correct? \u003C\u002Flabel\u003E";
-
-pug_html = pug_html + "\n  \u003Cinput" + (" class=\"statcheck\""+pug_attr("id", uid+'::'+a.iri+'::'+a.target+'::'+a.status, true, false)+" type=\"checkbox\" name=\"correct\"") + "\u002F\u003E";
-
-pug_html = pug_html + "\n  \u003Clabel\u003E";
-
-pug_html = pug_html + "Should be:\u003C\u002Flabel\u003E";
-
-pug_html = pug_html + "\n  \u003Cselect" + (" class=\"shouldbe\""+pug_attr("id", uid+'::'+a.iri+'::'+a.target+'::'+a.status+'::correction', true, false)) + "\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"affirmed\"\u003E";
-
-pug_html = pug_html + "Affirmed\u003C\u002Foption\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"uncertain\"\u003E";
-
-pug_html = pug_html + "Uncertain\u003C\u002Foption\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"negated\"\u003E";
-
-pug_html = pug_html + "Negated\u003C\u002Foption\u003E\n  \u003C\u002Fselect\u003E";
-
-pug_html = pug_html + "\n  \u003Ctable class=\"table clist\"\u003E";
-
-pug_html = pug_html + "\n    \u003Cthead\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Sentence\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Text\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Tags\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "Classification\u003C\u002Fth\u003E\n    \u003C\u002Fthead\u003E";
+pug_html = pug_html + "\n  \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
 
 pug_html = pug_html + "\n    \u003Ctbody\u003E";
 
-pug_html = pug_html + " ";
-
-pug_html = pug_html + "\n      \u003Cdiv class=\"panel-body\"\u003E";
-
-pug_html = pug_html + " ";
-
-// iterate annotations
+// iterate qg
 ;(function(){
-  var $$obj = annotations;
+  var $$obj = qg;
   if ('number' == typeof $$obj.length) {
       for (var pug_index2 = 0, $$l = $$obj.length; pug_index2 < $$l; pug_index2++) {
-        var ann = $$obj[pug_index2];
+        var q = $$obj[pug_index2];
 
-if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
 
-if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-//var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
+pug_html = pug_html + "\n          \u003Clabel\u003E";
 
-//var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
 
-//var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
+pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n        \u003Ctr\u003E";
+pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
-pug_html = pug_html + "\n          \u003Ctd\u003E";
+var id = q.id
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.sid) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
+if (q.askif) {
 
-pug_html = pug_html + "\n          \u003Ctd\u003E";
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
-pug_html = pug_html + (null == (pug_interp = ann.sentence) ? "" : pug_interp) + "\u003C\u002Ftd\u003E";
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.tags) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "\n            \u003Ctable\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "mention \u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "uncertain\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "negation\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::mention', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", mChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::uncertain', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", uChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
-}
-}
-      }
-  } else {
-    var $$l = 0;
-    for (var pug_index2 in $$obj) {
-      $$l++;
-      var ann = $$obj[pug_index2];
-
-if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
-
-if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
-
-//var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
-
-//var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
-
-//var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
-
-pug_html = pug_html + "\n        \u003Ctr\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.sid) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (null == (pug_interp = ann.sentence) ? "" : pug_interp) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.tags) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "\n            \u003Ctable\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "mention \u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "uncertain\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "negation\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::mention', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", mChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::uncertain', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", uChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
-}
-}
-    }
-  }
-}).call(this);
-
-pug_html = pug_html + "\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
-}
-      }
-  } else {
-    var $$l = 0;
-    for (var pug_index1 in $$obj) {
-      $$l++;
-      var t = $$obj[pug_index1];
-
-if (targets[t]) {
-
-const a = targets[t]
-
-pug_html = pug_html + "\n  \u003Cp\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = t) ? "" : pug_interp));
-
-pug_html = pug_html + " status: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = a.status) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n  \u003Clabel\u003E";
-
-pug_html = pug_html + "Correct? \u003C\u002Flabel\u003E";
-
-pug_html = pug_html + "\n  \u003Cinput" + (" class=\"statcheck\""+pug_attr("id", uid+'::'+a.iri+'::'+a.target+'::'+a.status, true, false)+" type=\"checkbox\" name=\"correct\"") + "\u002F\u003E";
-
-pug_html = pug_html + "\n  \u003Clabel\u003E";
-
-pug_html = pug_html + "Should be:\u003C\u002Flabel\u003E";
-
-pug_html = pug_html + "\n  \u003Cselect" + (" class=\"shouldbe\""+pug_attr("id", uid+'::'+a.iri+'::'+a.target+'::'+a.status+'::correction', true, false)) + "\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"affirmed\"\u003E";
-
-pug_html = pug_html + "Affirmed\u003C\u002Foption\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"uncertain\"\u003E";
-
-pug_html = pug_html + "Uncertain\u003C\u002Foption\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"negated\"\u003E";
-
-pug_html = pug_html + "Negated\u003C\u002Foption\u003E\n  \u003C\u002Fselect\u003E";
-
-pug_html = pug_html + "\n  \u003Ctable class=\"table clist\"\u003E";
-
-pug_html = pug_html + "\n    \u003Cthead\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Sentence\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Text\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Tags\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "Classification\u003C\u002Fth\u003E\n    \u003C\u002Fthead\u003E";
-
-pug_html = pug_html + "\n    \u003Ctbody\u003E";
-
-pug_html = pug_html + " ";
-
-pug_html = pug_html + "\n      \u003Cdiv class=\"panel-body\"\u003E";
-
-pug_html = pug_html + " ";
-
-// iterate annotations
+// iterate q.responses
 ;(function(){
-  var $$obj = annotations;
+  var $$obj = q.responses;
   if ('number' == typeof $$obj.length) {
       for (var pug_index3 = 0, $$l = $$obj.length; pug_index3 < $$l; pug_index3++) {
-        var ann = $$obj[pug_index3];
+        var r = $$obj[pug_index3];
 
-if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
-if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
-
-//var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
-
-//var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
-
-//var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
-
-pug_html = pug_html + "\n        \u003Ctr\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.sid) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (null == (pug_interp = ann.sentence) ? "" : pug_interp) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.tags) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "\n            \u003Ctable\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "mention \u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "uncertain\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "negation\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::mention', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", mChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::uncertain', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", uChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
-}
-}
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
   } else {
     var $$l = 0;
     for (var pug_index3 in $$obj) {
       $$l++;
-      var ann = $$obj[pug_index3];
+      var r = $$obj[pug_index3];
 
-if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
-if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
-
-//var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
-
-//var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
-
-//var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
-
-pug_html = pug_html + "\n        \u003Ctr\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.sid) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (null == (pug_interp = ann.sentence) ? "" : pug_interp) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.tags) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "\n            \u003Ctable\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "mention \u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "uncertain\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "negation\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::mention', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", mChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::uncertain', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", uChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
-}
-}
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
-}
-    }
-  }
-}).call(this);
-
-      }
-  } else {
-    var $$l = 0;
-    for (var iri in $$obj) {
-      $$l++;
-      var targets = $$obj[iri];
-
-if (groupMode) {
-
-pug_html = pug_html + "\n  \u003Ch3\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = iri) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
 }
 else {
 
-pug_html = pug_html + "\n  \u003Ch3\u003E";
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = iriLabels[iri]) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
-}
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
-// iterate ts
+// iterate q.responses
 ;(function(){
-  var $$obj = ts;
+  var $$obj = q.responses;
   if ('number' == typeof $$obj.length) {
       for (var pug_index4 = 0, $$l = $$obj.length; pug_index4 < $$l; pug_index4++) {
-        var t = $$obj[pug_index4];
+        var r = $$obj[pug_index4];
 
-if (targets[t]) {
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
-const a = targets[t]
-
-pug_html = pug_html + "\n  \u003Cp\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = t) ? "" : pug_interp));
-
-pug_html = pug_html + " status: ";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = a.status) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
-
-pug_html = pug_html + "\n  \u003Clabel\u003E";
-
-pug_html = pug_html + "Correct? \u003C\u002Flabel\u003E";
-
-pug_html = pug_html + "\n  \u003Cinput" + (" class=\"statcheck\""+pug_attr("id", uid+'::'+a.iri+'::'+a.target+'::'+a.status, true, false)+" type=\"checkbox\" name=\"correct\"") + "\u002F\u003E";
-
-pug_html = pug_html + "\n  \u003Clabel\u003E";
-
-pug_html = pug_html + "Should be:\u003C\u002Flabel\u003E";
-
-pug_html = pug_html + "\n  \u003Cselect" + (" class=\"shouldbe\""+pug_attr("id", uid+'::'+a.iri+'::'+a.target+'::'+a.status+'::correction', true, false)) + "\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"affirmed\"\u003E";
-
-pug_html = pug_html + "Affirmed\u003C\u002Foption\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"uncertain\"\u003E";
-
-pug_html = pug_html + "Uncertain\u003C\u002Foption\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"negated\"\u003E";
-
-pug_html = pug_html + "Negated\u003C\u002Foption\u003E\n  \u003C\u002Fselect\u003E";
-
-pug_html = pug_html + "\n  \u003Ctable class=\"table clist\"\u003E";
-
-pug_html = pug_html + "\n    \u003Cthead\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Sentence\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Text\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Tags\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "Classification\u003C\u002Fth\u003E\n    \u003C\u002Fthead\u003E";
-
-pug_html = pug_html + "\n    \u003Ctbody\u003E";
-
-pug_html = pug_html + " ";
-
-pug_html = pug_html + "\n      \u003Cdiv class=\"panel-body\"\u003E";
-
-pug_html = pug_html + " ";
-
-// iterate annotations
-;(function(){
-  var $$obj = annotations;
-  if ('number' == typeof $$obj.length) {
-      for (var pug_index5 = 0, $$l = $$obj.length; pug_index5 < $$l; pug_index5++) {
-        var ann = $$obj[pug_index5];
-
-if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
-
-if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
-
-//var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
-
-//var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
-
-//var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
-
-pug_html = pug_html + "\n        \u003Ctr\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.sid) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (null == (pug_interp = ann.sentence) ? "" : pug_interp) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.tags) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "\n            \u003Ctable\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "mention \u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "uncertain\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "negation\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::mention', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", mChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::uncertain', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", uChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
-}
-}
-      }
-  } else {
-    var $$l = 0;
-    for (var pug_index5 in $$obj) {
-      $$l++;
-      var ann = $$obj[pug_index5];
-
-if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
-
-if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
-
-//var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
-
-//var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
-
-//var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
-
-pug_html = pug_html + "\n        \u003Ctr\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.sid) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (null == (pug_interp = ann.sentence) ? "" : pug_interp) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.tags) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "\n            \u003Ctable\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "mention \u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "uncertain\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "negation\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::mention', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", mChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::uncertain', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", uChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
-}
-}
-    }
-  }
-}).call(this);
-
-pug_html = pug_html + "\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
-}
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
   } else {
     var $$l = 0;
     for (var pug_index4 in $$obj) {
       $$l++;
-      var t = $$obj[pug_index4];
+      var r = $$obj[pug_index4];
 
-if (targets[t]) {
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
-const a = targets[t]
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
 
-pug_html = pug_html + "\n  \u003Cp\u003E";
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index2 in $$obj) {
+      $$l++;
+      var q = $$obj[pug_index2];
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = t) ? "" : pug_interp));
+pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
 
-pug_html = pug_html + " status: ";
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = a.status) ? "" : pug_interp)) + "\u003C\u002Fp\u003E";
+pug_html = pug_html + "\n          \u003Clabel\u003E";
 
-pug_html = pug_html + "\n  \u003Clabel\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
 
-pug_html = pug_html + "Correct? \u003C\u002Flabel\u003E";
+pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n  \u003Cinput" + (" class=\"statcheck\""+pug_attr("id", uid+'::'+a.iri+'::'+a.target+'::'+a.status, true, false)+" type=\"checkbox\" name=\"correct\"") + "\u002F\u003E";
+pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
-pug_html = pug_html + "\n  \u003Clabel\u003E";
+var id = q.id
 
-pug_html = pug_html + "Should be:\u003C\u002Flabel\u003E";
+if (q.askif) {
 
-pug_html = pug_html + "\n  \u003Cselect" + (" class=\"shouldbe\""+pug_attr("id", uid+'::'+a.iri+'::'+a.target+'::'+a.status+'::correction', true, false)) + "\u003E";
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
-pug_html = pug_html + "\n    \u003Coption value=\"affirmed\"\u003E";
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
-pug_html = pug_html + "Affirmed\u003C\u002Foption\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"uncertain\"\u003E";
-
-pug_html = pug_html + "Uncertain\u003C\u002Foption\u003E";
-
-pug_html = pug_html + "\n    \u003Coption value=\"negated\"\u003E";
-
-pug_html = pug_html + "Negated\u003C\u002Foption\u003E\n  \u003C\u002Fselect\u003E";
-
-pug_html = pug_html + "\n  \u003Ctable class=\"table clist\"\u003E";
-
-pug_html = pug_html + "\n    \u003Cthead\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Sentence\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Text\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth\u003E";
-
-pug_html = pug_html + "Tags\u003C\u002Fth\u003E";
-
-pug_html = pug_html + "\n      \u003Cth style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "Classification\u003C\u002Fth\u003E\n    \u003C\u002Fthead\u003E";
-
-pug_html = pug_html + "\n    \u003Ctbody\u003E";
-
-pug_html = pug_html + " ";
-
-pug_html = pug_html + "\n      \u003Cdiv class=\"panel-body\"\u003E";
-
-pug_html = pug_html + " ";
-
-// iterate annotations
+// iterate q.responses
 ;(function(){
-  var $$obj = annotations;
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index5 = 0, $$l = $$obj.length; pug_index5 < $$l; pug_index5++) {
+        var r = $$obj[pug_index5];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index5 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index5];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+else {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
   if ('number' == typeof $$obj.length) {
       for (var pug_index6 = 0, $$l = $$obj.length; pug_index6 < $$l; pug_index6++) {
-        var ann = $$obj[pug_index6];
+        var r = $$obj[pug_index6];
 
-if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
-if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
-
-//var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
-
-//var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
-
-//var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
-
-pug_html = pug_html + "\n        \u003Ctr\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.sid) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (null == (pug_interp = ann.sentence) ? "" : pug_interp) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.tags) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "\n            \u003Ctable\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "mention \u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "uncertain\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "negation\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::mention', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", mChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::uncertain', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", uChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
-}
-}
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
   } else {
     var $$l = 0;
     for (var pug_index6 in $$obj) {
       $$l++;
-      var ann = $$obj[pug_index6];
+      var r = $$obj[pug_index6];
 
-if ((groupMode == false && ann.iri == a.iri) || (groupMode == true && ann.group == a.iri)) {
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
-if (((t == 'self' && ann.tags.indexOf('family') == -1) || (t == 'family' && ann.tags.indexOf('family') != -1))) {
-
-//var mChecked = sentence.asses.indexOf('mention') != -1 ? "checked" : false;
-
-//var uChecked = sentence.asses.indexOf('uncertain') != -1 ? "checked" : false;
-
-//var nChecked = sentence.asses.indexOf('negation') != -1 ? "checked" : false;
-
-pug_html = pug_html + "\n        \u003Ctr\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.sid) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (null == (pug_interp = ann.sentence) ? "" : pug_interp) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd\u003E";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = ann.tags) ? "" : pug_interp)) + "\u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n          \u003Ctd style=\"display:none;\"\u003E";
-
-pug_html = pug_html + "\n            \u003Ctable\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "mention \u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "uncertain\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Clabel\u003E";
-
-pug_html = pug_html + "negation\u003C\u002Flabel\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E";
-
-pug_html = pug_html + "\n              \u003Ctr\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::mention', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", mChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::uncertain', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", uChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E";
-
-pug_html = pug_html + "\n                \u003Ctd class=\"aabox\"\u003E";
-
-pug_html = pug_html + "\n                  \u003Cinput" + (" class=\"echeck\""+pug_attr("id", title+'::'+sid+'::negation', true, false)+" type=\"checkbox\" name=\"correct\""+pug_attr("checked", nChecked, true, false)) + "\u002F\u003E\n                \u003C\u002Ftd\u003E\n              \u003C\u002Ftr\u003E\n            \u003C\u002Ftable\u003E\n          \u003C\u002Ftd\u003E\n        \u003C\u002Ftr\u003E";
-}
-}
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
 }
+pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index1 in $$obj) {
+      $$l++;
+      var qg = $$obj[pug_index1];
+
+gcount++
+
+pug_html = pug_html + "\n  \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
+
+pug_html = pug_html + "\n    \u003Ctbody\u003E";
+
+// iterate qg
+;(function(){
+  var $$obj = qg;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index7 = 0, $$l = $$obj.length; pug_index7 < $$l; pug_index7++) {
+        var q = $$obj[pug_index7];
+
+pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+
+pug_html = pug_html + "\n          \u003Clabel\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+
+pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+
+var id = q.id
+
+if (q.askif) {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index8 = 0, $$l = $$obj.length; pug_index8 < $$l; pug_index8++) {
+        var r = $$obj[pug_index8];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index8 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index8];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+else {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index9 = 0, $$l = $$obj.length; pug_index9 < $$l; pug_index9++) {
+        var r = $$obj[pug_index9];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index9 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index9];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index7 in $$obj) {
+      $$l++;
+      var q = $$obj[pug_index7];
+
+pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+
+pug_html = pug_html + "\n          \u003Clabel\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+
+pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+
+var id = q.id
+
+if (q.askif) {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index10 = 0, $$l = $$obj.length; pug_index10 < $$l; pug_index10++) {
+        var r = $$obj[pug_index10];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index10 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index10];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+else {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index11 = 0, $$l = $$obj.length; pug_index11 < $$l; pug_index11++) {
+        var r = $$obj[pug_index11];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index11 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index11];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
+    }
+  }
+}).call(this);
+
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index0 in $$obj) {
+      $$l++;
+      var g = $$obj[pug_index0];
+
+pug_html = pug_html + "\n  \u003Ch2\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh2\u003E";
+
+// iterate g.questions
+;(function(){
+  var $$obj = g.questions;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index12 = 0, $$l = $$obj.length; pug_index12 < $$l; pug_index12++) {
+        var qg = $$obj[pug_index12];
+
+gcount++
+
+pug_html = pug_html + "\n  \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
+
+pug_html = pug_html + "\n    \u003Ctbody\u003E";
+
+// iterate qg
+;(function(){
+  var $$obj = qg;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index13 = 0, $$l = $$obj.length; pug_index13 < $$l; pug_index13++) {
+        var q = $$obj[pug_index13];
+
+pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+
+pug_html = pug_html + "\n          \u003Clabel\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+
+pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+
+var id = q.id
+
+if (q.askif) {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index14 = 0, $$l = $$obj.length; pug_index14 < $$l; pug_index14++) {
+        var r = $$obj[pug_index14];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index14 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index14];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+else {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index15 = 0, $$l = $$obj.length; pug_index15 < $$l; pug_index15++) {
+        var r = $$obj[pug_index15];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index15 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index15];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index13 in $$obj) {
+      $$l++;
+      var q = $$obj[pug_index13];
+
+pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+
+pug_html = pug_html + "\n          \u003Clabel\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+
+pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+
+var id = q.id
+
+if (q.askif) {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index16 = 0, $$l = $$obj.length; pug_index16 < $$l; pug_index16++) {
+        var r = $$obj[pug_index16];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index16 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index16];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+else {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index17 = 0, $$l = $$obj.length; pug_index17 < $$l; pug_index17++) {
+        var r = $$obj[pug_index17];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index17 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index17];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index12 in $$obj) {
+      $$l++;
+      var qg = $$obj[pug_index12];
+
+gcount++
+
+pug_html = pug_html + "\n  \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
+
+pug_html = pug_html + "\n    \u003Ctbody\u003E";
+
+// iterate qg
+;(function(){
+  var $$obj = qg;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index18 = 0, $$l = $$obj.length; pug_index18 < $$l; pug_index18++) {
+        var q = $$obj[pug_index18];
+
+pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+
+pug_html = pug_html + "\n          \u003Clabel\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+
+pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+
+var id = q.id
+
+if (q.askif) {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index19 = 0, $$l = $$obj.length; pug_index19 < $$l; pug_index19++) {
+        var r = $$obj[pug_index19];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index19 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index19];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+else {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index20 = 0, $$l = $$obj.length; pug_index20 < $$l; pug_index20++) {
+        var r = $$obj[pug_index20];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index20 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index20];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index18 in $$obj) {
+      $$l++;
+      var q = $$obj[pug_index18];
+
+pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+
+pug_html = pug_html + "\n          \u003Clabel\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+
+pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+
+pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+
+var id = q.id
+
+if (q.askif) {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index21 = 0, $$l = $$obj.length; pug_index21 < $$l; pug_index21++) {
+        var r = $$obj[pug_index21];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index21 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index21];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+else {
+
+pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+
+pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+
+// iterate q.responses
+;(function(){
+  var $$obj = q.responses;
+  if ('number' == typeof $$obj.length) {
+      for (var pug_index22 = 0, $$l = $$obj.length; pug_index22 < $$l; pug_index22++) {
+        var r = $$obj[pug_index22];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+      }
+  } else {
+    var $$l = 0;
+    for (var pug_index22 in $$obj) {
+      $$l++;
+      var r = $$obj[pug_index22];
+
+pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+}
+pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+    }
+  }
+}).call(this);
+
+pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
     }
   }
 }).call(this);
@@ -45307,13 +45300,13 @@ pug_html = pug_html + "\u003Cbr\u002F\u003E";
 
 pug_html = pug_html + "\n  \u003Cbutton class=\"submit\" id=\"save\" value=\"Submit\" style=\"font-size:20px\"\u003E";
 
-pug_html = pug_html + "Save and Return\u003C\u002Fbutton\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"annotations" in locals_for_with?locals_for_with.annotations:typeof annotations!=="undefined"?annotations:undefined,"diagnoses" in locals_for_with?locals_for_with.diagnoses:typeof diagnoses!=="undefined"?diagnoses:undefined,"groupMode" in locals_for_with?locals_for_with.groupMode:typeof groupMode!=="undefined"?groupMode:undefined,"iriLabels" in locals_for_with?locals_for_with.iriLabels:typeof iriLabels!=="undefined"?iriLabels:undefined,"mChecked" in locals_for_with?locals_for_with.mChecked:typeof mChecked!=="undefined"?mChecked:undefined,"nChecked" in locals_for_with?locals_for_with.nChecked:typeof nChecked!=="undefined"?nChecked:undefined,"sid" in locals_for_with?locals_for_with.sid:typeof sid!=="undefined"?sid:undefined,"title" in locals_for_with?locals_for_with.title:typeof title!=="undefined"?title:undefined,"uChecked" in locals_for_with?locals_for_with.uChecked:typeof uChecked!=="undefined"?uChecked:undefined,"uid" in locals_for_with?locals_for_with.uid:typeof uid!=="undefined"?uid:undefined));return pug_html;}
+pug_html = pug_html + "Save and Return\u003C\u002Fbutton\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"questions" in locals_for_with?locals_for_with.questions:typeof questions!=="undefined"?questions:undefined,"uid" in locals_for_with?locals_for_with.uid:typeof uid!=="undefined"?uid:undefined));return pug_html;}
 
-},{"fs":10,"pug-runtime":8}],10:[function(require,module,exports){
+},{"fs":11,"pug-runtime":8}],11:[function(require,module,exports){
 
-},{}],11:[function(require,module,exports){
-arguments[4][10][0].apply(exports,arguments)
-},{"dup":10}],12:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
+arguments[4][11][0].apply(exports,arguments)
+},{"dup":11}],13:[function(require,module,exports){
 (function (global){(function (){
 /*! https://mths.be/punycode v1.4.1 by @mathias */
 ;(function(root) {
@@ -45850,7 +45843,7 @@ arguments[4][10][0].apply(exports,arguments)
 }(this));
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -45936,7 +45929,7 @@ var isArray = Array.isArray || function (xs) {
   return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -46023,13 +46016,13 @@ var objectKeys = Object.keys || function (obj) {
   return res;
 };
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 exports.decode = exports.parse = require('./decode');
 exports.encode = exports.stringify = require('./encode');
 
-},{"./decode":13,"./encode":14}],16:[function(require,module,exports){
+},{"./decode":14,"./encode":15}],17:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -46763,7 +46756,7 @@ Url.prototype.parseHost = function() {
   if (host) this.hostname = host;
 };
 
-},{"./util":17,"punycode":12,"querystring":15}],17:[function(require,module,exports){
+},{"./util":18,"punycode":13,"querystring":16}],18:[function(require,module,exports){
 'use strict';
 
 module.exports = {
