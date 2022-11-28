@@ -188,16 +188,14 @@ const loadView = (uid) => {
     let result = {
       'uid': uid,
       'comments': $('#comments').val(),
-      'statcheck': {}
+      'answers': {}
     };
 
-    var sassertions = document.getElementsByClassName("statcheck");
-    for(var i = 0; i < sassertions.length; i++) {
-      result.statcheck[sassertions.item(i).id] = {
-        value: sassertions.item(i).checked,
-        correction: document.getElementById(sassertions.item(i).id+'::correction').value
-      };
-    }
+    $('select').each(function() {
+      result.answers[$(this).attr('id')] = this.options[this.selectedIndex].value;
+    });
+
+    console.log(result)
   
     results[uid] = result;
     loadList();

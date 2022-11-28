@@ -14,7 +14,7 @@
       each id in sample
         - c++
         tr
-          -if(results[uid])
+          -if(results[id])
             td(style='text-align:left;background-color:green;')
               a(href='javascript:f.loadView("'+id+'")' style='color: white') #{id}
           -else

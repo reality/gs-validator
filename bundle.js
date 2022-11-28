@@ -189,16 +189,14 @@ const loadView = (uid) => {
     let result = {
       'uid': uid,
       'comments': $('#comments').val(),
-      'statcheck': {}
+      'answers': {}
     };
 
-    var sassertions = document.getElementsByClassName("statcheck");
-    for(var i = 0; i < sassertions.length; i++) {
-      result.statcheck[sassertions.item(i).id] = {
-        value: sassertions.item(i).checked,
-        correction: document.getElementById(sassertions.item(i).id+'::correction').value
-      };
-    }
+    $('select').each(function() {
+      result.answers[$(this).attr('id')] = this.options[this.selectedIndex].value;
+    });
+
+    console.log(result)
   
     results[uid] = result;
     loadList();
@@ -326,7 +324,7 @@ module.exports=template;function pug_attr(t,e,n,r){if(!1===e||null==e||!e&&("cla
 function pug_escape(e){var a=""+e,t=pug_match_html.exec(a);if(!t)return e;var r,c,n,s="";for(r=t.index,c=0;r<a.length;r++){switch(a.charCodeAt(r)){case 34:n="&quot;";break;case 38:n="&amp;";break;case 60:n="&lt;";break;case 62:n="&gt;";break;default:continue}c!==r&&(s+=a.substring(c,r)),c=r+1,s+=n}return c!==r?s+a.substring(c,r):s}
 var pug_match_html=/["&<>]/;
 function pug_rethrow(n,e,r,t){if(!(n instanceof Error))throw n;if(!("undefined"==typeof window&&e||t))throw n.message+=" on line "+r,n;try{t=t||require("fs").readFileSync(e,"utf8")}catch(e){pug_rethrow(n,null,r)}var i=3,a=t.split("\n"),o=Math.max(r-i,0),h=Math.min(a.length,r+i),i=a.slice(o,h).map(function(n,e){var t=e+o+1;return(t==r?"  > ":"    ")+t+"| "+n}).join("\n");throw n.path=e,n.message=(e||"Pug")+":"+r+"\n"+i+"\n\n"+n.message,n}function template(locals) {var pug_html = "", pug_mixins = {}, pug_interp;
-;var locals_for_with = (locals || {});(function (results, sample, uid) {var pug_indent = [];
+;var locals_for_with = (locals || {});(function (results, sample) {var pug_indent = [];
 
 pug_html = pug_html + "\n\u003Cdiv class=\"container\"\u003E";
 
@@ -377,7 +375,7 @@ c++
 
 pug_html = pug_html + "\n      \u003Ctr\u003E";
 
-if(results[uid])
+if(results[id])
 {
 
 pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left;background-color:green;\"\u003E";
@@ -407,7 +405,7 @@ c++
 
 pug_html = pug_html + "\n      \u003Ctr\u003E";
 
-if(results[uid])
+if(results[id])
 {
 
 pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left;background-color:green;\"\u003E";
@@ -430,7 +428,7 @@ pug_html = pug_html + "\n      \u003C\u002Ftr\u003E";
   }
 }).call(this);
 
-pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"results" in locals_for_with?locals_for_with.results:typeof results!=="undefined"?results:undefined,"sample" in locals_for_with?locals_for_with.sample:typeof sample!=="undefined"?sample:undefined,"uid" in locals_for_with?locals_for_with.uid:typeof uid!=="undefined"?uid:undefined));return pug_html;}
+pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E\n\u003C\u002Fdiv\u003E";}.call(this,"results" in locals_for_with?locals_for_with.results:typeof results!=="undefined"?results:undefined,"sample" in locals_for_with?locals_for_with.sample:typeof sample!=="undefined"?sample:undefined));return pug_html;}
 
 },{"fs":11,"pug-runtime":8}],4:[function(require,module,exports){
 /*! DataTables 1.10.18
