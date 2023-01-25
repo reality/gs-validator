@@ -7,6 +7,9 @@
   each g in questions.groups
     h2 #{g.title}
 
+    h3 Link: 
+      a(href='https://doi.org/'+uid target='_blank') https://doi.org/#{uid}
+
     each qg in g.questions
       -gcount++
       table.question.stripe(id='question::'+gcount)
@@ -20,9 +23,14 @@
                 - var id = q.id
                 if q.askif
                   select.v(id=q.id onchange="javascript:f.changedAnswer(id)" disabled)
-                    option(value=' ')
+                    if q.responses.indexOf('unmentioned') != -1
+                      option(value="unmentioned") unmentioned
+                    else
+                      option(value=" ")
                     each r in q.responses
-                      option(value=r) #{r}
+                      if r != 'unmentioned'
+                        option(value=r) #{r}
+
                 else 
                   select.v(id=q.id onchange="javascript:f.changedAnswer(id)")
                     option(value=' ')

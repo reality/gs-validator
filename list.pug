@@ -2,21 +2,31 @@
   - var c = 0;
   h1 Gold Standard Creator
   button#save.submit(value='Submit' style='font-size:20px') Save Results
-  h3 Patients
+  h3 Documents
   table#plist.stripe
     thead
       tr
+        th() Index
         th(style='width:100%') ID
     tfoot
       tr
-        th(style='width:18%') ID
+        th() Index
+        th(style='width:100%') ID
     tbody
       each id in sample
         - c++
-        tr
-          -if(results[id])
-            td(style='text-align:left;background-color:green;')
-              a(href='javascript:f.loadView("'+id+'")' style='color: white') #{id}
-          -else
-            td(style='text-align:left')
-              a(href='javascript:f.loadView("'+id+'")') #{id}
+        if id != ''
+          tr
+            -if(results[id])
+              td(style='text-align:left;background-color:green;')
+                a(href='javascript:f.loadView("'+id+'")' style='color: white') #{c}
+            -else
+              td(style='text-align:left')
+                a(href='javascript:f.loadView("'+id+'")') #{c}
+
+            -if(results[id])
+              td(style='text-align:left;background-color:green;')
+                a(href='javascript:f.loadView("'+id+'")' style='color: white') #{id}
+            -else
+              td(style='text-align:left')
+                a(href='javascript:f.loadView("'+id+'")') #{id}

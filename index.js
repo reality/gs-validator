@@ -9,13 +9,14 @@ var url = require('url'),
     results = {},
     questions = require('./questions.json'),
     qMap = {},
+  userInfo = {},
     table,
     groupMode = false;
+
 
 _.each(questions.groups, (groups) => {
   _.each(groups.questions, (g) => {
     _.each(g, (q) => {
-        console.log(q.id)
         qMap[q.id] = q;
     })
   })
@@ -23,6 +24,10 @@ _.each(questions.groups, (groups) => {
 
 $(document).ready(function() {
   loadIndex();
+
+  window.onbeforeunload = function() {
+      return true;
+  };
 });
 
 /*** Functions ***/
@@ -83,7 +88,10 @@ const loadIndex = (cb) => {
   })
 
   $('#progressFileInput').bind('change', readFileFactory((text) => {
-    results = JSON.parse(text); // TODO error checking
+    const r = JSON.parse(text); // TODO error checking
+    results = r.results;
+    sample = r.sample;
+    userInfo = r.userInfo;
   }));
   $('#samFileInput').bind('change', readFileFactory((text) => {
     sample = text.split('\n');
@@ -143,7 +151,6 @@ const refreshDisabled = () => {
         const c = _.includes(aq.response, 
           selected);
 
-        console.log(c)
         if(c == false) {
             disabled = true 
         }
@@ -152,7 +159,7 @@ const refreshDisabled = () => {
 
     $(this).prop('disabled', disabled);
     if(disabled) {
-      $(this).prop('selectedIndex', "0");
+      $(this).prop('selectedIndex', '0');
     }
   });
 
@@ -170,17 +177,14 @@ const loadView = (uid) => {
   resetScroll();
   refreshDisabled();
 
-  // Reload the results
+  // TODO: Reload the results
   if(_.has(results, uid)) {
     const r = results[uid];
+
     $('#comments').text(r.comments);
-    
-    var sassertions = document.getElementsByClassName("statcheck");
-    for(var i = 0; i < sassertions.length; i++) {
-      sassertions.item(i).checked = r.statcheck[sassertions.item(i).id].value;
-      document.getElementById(sassertions.item(i).id+'::correction').disabled = r.statcheck[sassertions.item(i).id].value;
-      document.getElementById(sassertions.item(i).id+'::correction').value = r.statcheck[sassertions.item(i).id].correction;
-    }
+    $('select').each(function() {
+      $(this).prop('value', r.answers[$(this).attr('id')])
+    });
   }
  
   // on save

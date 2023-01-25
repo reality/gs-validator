@@ -1,4 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.f = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.e = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 var url = require('url'),
     indexTemplate = require('./index.pug'),
     listTemplate = require('./list.pug'),
@@ -10,13 +10,14 @@ var url = require('url'),
     results = {},
     questions = require('./questions.json'),
     qMap = {},
+  userInfo = {},
     table,
     groupMode = false;
+
 
 _.each(questions.groups, (groups) => {
   _.each(groups.questions, (g) => {
     _.each(g, (q) => {
-        console.log(q.id)
         qMap[q.id] = q;
     })
   })
@@ -24,6 +25,10 @@ _.each(questions.groups, (groups) => {
 
 $(document).ready(function() {
   loadIndex();
+
+  window.onbeforeunload = function() {
+      return true;
+  };
 });
 
 /*** Functions ***/
@@ -84,7 +89,10 @@ const loadIndex = (cb) => {
   })
 
   $('#progressFileInput').bind('change', readFileFactory((text) => {
-    results = JSON.parse(text); // TODO error checking
+    const r = JSON.parse(text); // TODO error checking
+    results = r.results;
+    sample = r.sample;
+    userInfo = r.userInfo;
   }));
   $('#samFileInput').bind('change', readFileFactory((text) => {
     sample = text.split('\n');
@@ -144,7 +152,6 @@ const refreshDisabled = () => {
         const c = _.includes(aq.response, 
           selected);
 
-        console.log(c)
         if(c == false) {
             disabled = true 
         }
@@ -153,7 +160,7 @@ const refreshDisabled = () => {
 
     $(this).prop('disabled', disabled);
     if(disabled) {
-      $(this).prop('selectedIndex', "0");
+      $(this).prop('selectedIndex', '0');
     }
   });
 
@@ -171,17 +178,14 @@ const loadView = (uid) => {
   resetScroll();
   refreshDisabled();
 
-  // Reload the results
+  // TODO: Reload the results
   if(_.has(results, uid)) {
     const r = results[uid];
+
     $('#comments').text(r.comments);
-    
-    var sassertions = document.getElementsByClassName("statcheck");
-    for(var i = 0; i < sassertions.length; i++) {
-      sassertions.item(i).checked = r.statcheck[sassertions.item(i).id].value;
-      document.getElementById(sassertions.item(i).id+'::correction').disabled = r.statcheck[sassertions.item(i).id].value;
-      document.getElementById(sassertions.item(i).id+'::correction').value = r.statcheck[sassertions.item(i).id].correction;
-    }
+    $('select').each(function() {
+      $(this).prop('value', r.answers[$(this).attr('id')])
+    });
   }
  
   // on save
@@ -268,14 +272,6 @@ pug_html = pug_html + "\n              \u003Cinput id=\"nameInput\" type=\"text\
 
 pug_html = pug_html + "\n            \u003Cdiv class=\"form-group form-control-static\"\u003E";
 
-pug_html = pug_html + "\n              \u003Clabel for=\"gmcInput\"\u003E";
-
-pug_html = pug_html + "GMC Number:\u003C\u002Flabel\u003E";
-
-pug_html = pug_html + "\n              \u003Cinput id=\"gmcInput\" type=\"text\"\u002F\u003E\n            \u003C\u002Fdiv\u003E";
-
-pug_html = pug_html + "\n            \u003Cdiv class=\"form-group form-control-static\"\u003E";
-
 pug_html = pug_html + "\n              \u003Clabel for=\"specialtyInput\"\u003E";
 
 pug_html = pug_html + "Specialty:\u003C\u002Flabel\u003E";
@@ -286,7 +282,7 @@ pug_html = pug_html + "\n            \u003Cdiv class=\"form-group form-control-s
 
 pug_html = pug_html + "\n              \u003Clabel for=\"sampleFileInput\"\u003E";
 
-pug_html = pug_html + "Select patient sample file:\u003C\u002Flabel\u003E";
+pug_html = pug_html + "Select sample file:\u003C\u002Flabel\u003E";
 
 pug_html = pug_html + "\n              \u003Cinput id=\"samFileInput\" type=\"file\"\u002F\u003E\n            \u003C\u002Fdiv\u003E";
 
@@ -298,7 +294,7 @@ pug_html = pug_html + "\n          \u003Cdiv class=\"content-section\" id=\"sect
 
 pug_html = pug_html + "\n            \u003Cp\u003E";
 
-pug_html = pug_html + "Use this if you have a results.json file generated by this application, that you want to cvontinue evaluating. If not, then click on 'New Project' to load Komenti files directly.\u003C\u002Fp\u003E";
+pug_html = pug_html + "Use this if you have a results.json file generated by this application, that you want to cvontinue evaluating. If not, then click on 'New Project' to start a new one.\u003C\u002Fp\u003E";
 
 pug_html = pug_html + "\n            \u003Cdiv class=\"form-group form-control-static\"\u003E";
 
@@ -316,7 +312,7 @@ pug_html = pug_html + "\n        \u003Cdiv class=\"modal-footer\"\u003E";
 
 pug_html = pug_html + "\n          \u003Cp\u003E";
 
-pug_html = pug_html + "Version: 0.3.0-gsval\u003C\u002Fp\u003E\n        \u003C\u002Fdiv\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E\n\u003C\u002Fdiv\u003E";return pug_html;}
+pug_html = pug_html + "Version: 0.4.2-gsval-HFCod\u003C\u002Fp\u003E\n        \u003C\u002Fdiv\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E\n\u003C\u002Fdiv\u003E";return pug_html;}
 
 },{"fs":11,"pug-runtime":8}],3:[function(require,module,exports){
 var pug = require('pug-runtime');
@@ -342,13 +338,17 @@ pug_html = pug_html + "Save Results\u003C\u002Fbutton\u003E";
 
 pug_html = pug_html + "\n  \u003Ch3\u003E";
 
-pug_html = pug_html + "Patients\u003C\u002Fh3\u003E";
+pug_html = pug_html + "Documents\u003C\u002Fh3\u003E";
 
 pug_html = pug_html + "\n  \u003Ctable class=\"stripe\" id=\"plist\"\u003E";
 
 pug_html = pug_html + "\n    \u003Cthead\u003E";
 
 pug_html = pug_html + "\n      \u003Ctr\u003E";
+
+pug_html = pug_html + "\n        \u003Cth\u003E";
+
+pug_html = pug_html + "Index\u003C\u002Fth\u003E";
 
 pug_html = pug_html + "\n        \u003Cth style=\"width:100%\"\u003E";
 
@@ -358,7 +358,11 @@ pug_html = pug_html + "\n    \u003Ctfoot\u003E";
 
 pug_html = pug_html + "\n      \u003Ctr\u003E";
 
-pug_html = pug_html + "\n        \u003Cth style=\"width:18%\"\u003E";
+pug_html = pug_html + "\n        \u003Cth\u003E";
+
+pug_html = pug_html + "Index\u003C\u002Fth\u003E";
+
+pug_html = pug_html + "\n        \u003Cth style=\"width:100%\"\u003E";
 
 pug_html = pug_html + "ID\u003C\u002Fth\u003E\n      \u003C\u002Ftr\u003E\n    \u003C\u002Ftfoot\u003E";
 
@@ -373,7 +377,28 @@ pug_html = pug_html + "\n    \u003Ctbody\u003E";
 
 c++
 
+if (id != '') {
+
 pug_html = pug_html + "\n      \u003Ctr\u003E";
+
+if(results[id])
+{
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left;background-color:green;\"\u003E";
+
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id+'")', true, false)+" style=\"color: white\"") + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = c) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
+}
+else
+{
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\"\u003E";
+
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id+'")', true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = c) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
+}
 
 if(results[id])
 {
@@ -394,6 +419,7 @@ pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id
 pug_html = pug_html + (pug_escape(null == (pug_interp = id) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
 }
 pug_html = pug_html + "\n      \u003C\u002Ftr\u003E";
+}
       }
   } else {
     var $$l = 0;
@@ -403,7 +429,28 @@ pug_html = pug_html + "\n      \u003C\u002Ftr\u003E";
 
 c++
 
+if (id != '') {
+
 pug_html = pug_html + "\n      \u003Ctr\u003E";
+
+if(results[id])
+{
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left;background-color:green;\"\u003E";
+
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id+'")', true, false)+" style=\"color: white\"") + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = c) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
+}
+else
+{
+
+pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\"\u003E";
+
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id+'")', true, false)) + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = c) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
+}
 
 if(results[id])
 {
@@ -424,6 +471,7 @@ pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'javascript:f.loadView("'+id
 pug_html = pug_html + (pug_escape(null == (pug_interp = id) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Ftd\u003E";
 }
 pug_html = pug_html + "\n      \u003C\u002Ftr\u003E";
+}
     }
   }
 }).call(this);
@@ -44168,7 +44216,7 @@ module.exports={
         ], [
           {
             "id": "sm1.0",
-            "question": "Does this letter mention family history of HCM?",
+            "question": "Does this letter mention family history of HCM in any context?",
             "responses": [ "yes", "no", "not sure" ],
             "askif": [
               { "id": "hcm0.0", "response": [ "yes" ] }
@@ -44176,10 +44224,18 @@ module.exports={
           }, 
           {
             "id": "sm1.1",
-            "question": "Does this letter say that the patient has a family history of HCM?",
+            "question": "Does this letter say that the patient has a positive family history of HCM?",
             "responses": [ "yes", "no" ],
             "askif": [
               { "id": "sm1.0", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm1.1.1",
+            "question": "Does this letter say that the patient has a negative family history of HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "sm1.1", "response": [ "no" ] }
             ]
           },
           {
@@ -44261,7 +44317,23 @@ module.exports={
             "question": "Is the gene specified?",
             "responses": [ "[INPUT]", "no" ],
             "askif": [
-              { "id": "sm3.2", "response": [ "yes" ] }
+              { "id": "sm3.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm3.4",
+            "question": "Does this letter say that the person has a VUS for HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "sm3.2", "response": [ "no" ] }
+            ]
+          },
+          {
+            "id": "sm3.5",
+            "question": "Is the gene specified?",
+            "responses": [ "[INPUT]", "no" ],
+            "askif": [
+              { "id": "sm3.4", "response": [ "yes" ] }
             ]
           }
         ]
@@ -44273,7 +44345,7 @@ module.exports={
         [
           {
             "id": "scd0.0",
-            "question": "What is the wall thickness (in MM)?",
+            "question": "What is the maximum wall thickness (in MM)?",
             "responses": [ "[INPUT]", "unmentioned", "not sure" ],
             "askif": [
               { "id": "hcm0.1", "response": [ "yes" ] }
@@ -44313,7 +44385,7 @@ module.exports={
           },
           {
             "id": "scd0.5",
-            "question": "What is the LA size?",
+            "question": "What is the LA size (in MM)?",
             "responses": [ "[INPUT]", "unmentioned", "not sure" ],
             "askif": [
               { "id": "hcm0.1", "response": [ "yes" ] }
@@ -44321,7 +44393,7 @@ module.exports={
           },
           {
             "id": "scd0.6",
-            "question": "What is the maximum LVOT gradient at rest?",
+            "question": "What is the maximum LVOT gradient at rest (mmhg)?",
             "responses": [ "[INPUT]", "unmentioned", "not sure" ],
             "askif": [
               { "id": "hcm0.1", "response": [ "yes" ] }
@@ -44329,7 +44401,7 @@ module.exports={
           },
           {
             "id": "scd0.6",
-            "question": "What is the maximum LVOT gradient with valsalva?",
+            "question": "What is the maximum LVOT gradient with valsalva (mmhg)?",
             "responses": [ "[INPUT]", "unmentioned", "not sure" ],
             "askif": [
               { "id": "hcm0.1", "response": [ "yes" ] }
@@ -44514,6 +44586,16 @@ pug_html = pug_html + "\n  \u003Ch2\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh2\u003E";
 
+pug_html = pug_html + "\n  \u003Ch3\u003E";
+
+pug_html = pug_html + "Link: ";
+
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'https://doi.org/'+uid, true, false)+" target=\"_blank\"") + "\u003E";
+
+pug_html = pug_html + "https:\u002F\u002Fdoi.org\u002F";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Fh3\u003E";
+
 // iterate g.questions
 ;(function(){
   var $$obj = g.questions;
@@ -44552,7 +44634,16 @@ if (q.askif) {
 
 pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
+if (q.responses.indexOf('unmentioned') != -1) {
+
+pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+
+pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
+}
+else {
+
 pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+}
 
 // iterate q.responses
 ;(function(){
@@ -44561,9 +44652,12 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index3 = 0, $$l = $$obj.length; pug_index3 < $$l; pug_index3++) {
         var r = $$obj[pug_index3];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
       }
   } else {
     var $$l = 0;
@@ -44571,9 +44665,12 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index3];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
     }
   }
 }).call(this);
@@ -44643,7 +44740,16 @@ if (q.askif) {
 
 pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
+if (q.responses.indexOf('unmentioned') != -1) {
+
+pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+
+pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
+}
+else {
+
 pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+}
 
 // iterate q.responses
 ;(function(){
@@ -44652,9 +44758,12 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index5 = 0, $$l = $$obj.length; pug_index5 < $$l; pug_index5++) {
         var r = $$obj[pug_index5];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
       }
   } else {
     var $$l = 0;
@@ -44662,9 +44771,12 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index5];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
     }
   }
 }).call(this);
@@ -44752,7 +44864,16 @@ if (q.askif) {
 
 pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
+if (q.responses.indexOf('unmentioned') != -1) {
+
+pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+
+pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
+}
+else {
+
 pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+}
 
 // iterate q.responses
 ;(function(){
@@ -44761,9 +44882,12 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index8 = 0, $$l = $$obj.length; pug_index8 < $$l; pug_index8++) {
         var r = $$obj[pug_index8];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
       }
   } else {
     var $$l = 0;
@@ -44771,9 +44895,12 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index8];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
     }
   }
 }).call(this);
@@ -44843,7 +44970,16 @@ if (q.askif) {
 
 pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
+if (q.responses.indexOf('unmentioned') != -1) {
+
+pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+
+pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
+}
+else {
+
 pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+}
 
 // iterate q.responses
 ;(function(){
@@ -44852,9 +44988,12 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index10 = 0, $$l = $$obj.length; pug_index10 < $$l; pug_index10++) {
         var r = $$obj[pug_index10];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
       }
   } else {
     var $$l = 0;
@@ -44862,9 +45001,12 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index10];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
     }
   }
 }).call(this);
@@ -44929,6 +45071,16 @@ pug_html = pug_html + "\n  \u003Ch2\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh2\u003E";
 
+pug_html = pug_html + "\n  \u003Ch3\u003E";
+
+pug_html = pug_html + "Link: ";
+
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'https://doi.org/'+uid, true, false)+" target=\"_blank\"") + "\u003E";
+
+pug_html = pug_html + "https:\u002F\u002Fdoi.org\u002F";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Fh3\u003E";
+
 // iterate g.questions
 ;(function(){
   var $$obj = g.questions;
@@ -44967,7 +45119,16 @@ if (q.askif) {
 
 pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
+if (q.responses.indexOf('unmentioned') != -1) {
+
+pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+
+pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
+}
+else {
+
 pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+}
 
 // iterate q.responses
 ;(function(){
@@ -44976,9 +45137,12 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index14 = 0, $$l = $$obj.length; pug_index14 < $$l; pug_index14++) {
         var r = $$obj[pug_index14];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
       }
   } else {
     var $$l = 0;
@@ -44986,9 +45150,12 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index14];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
     }
   }
 }).call(this);
@@ -45058,7 +45225,16 @@ if (q.askif) {
 
 pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
+if (q.responses.indexOf('unmentioned') != -1) {
+
+pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+
+pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
+}
+else {
+
 pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+}
 
 // iterate q.responses
 ;(function(){
@@ -45067,9 +45243,12 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index16 = 0, $$l = $$obj.length; pug_index16 < $$l; pug_index16++) {
         var r = $$obj[pug_index16];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
       }
   } else {
     var $$l = 0;
@@ -45077,9 +45256,12 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index16];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
     }
   }
 }).call(this);
@@ -45167,7 +45349,16 @@ if (q.askif) {
 
 pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
+if (q.responses.indexOf('unmentioned') != -1) {
+
+pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+
+pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
+}
+else {
+
 pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+}
 
 // iterate q.responses
 ;(function(){
@@ -45176,9 +45367,12 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index19 = 0, $$l = $$obj.length; pug_index19 < $$l; pug_index19++) {
         var r = $$obj[pug_index19];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
       }
   } else {
     var $$l = 0;
@@ -45186,9 +45380,12 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index19];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
     }
   }
 }).call(this);
@@ -45258,7 +45455,16 @@ if (q.askif) {
 
 pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
+if (q.responses.indexOf('unmentioned') != -1) {
+
+pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+
+pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
+}
+else {
+
 pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+}
 
 // iterate q.responses
 ;(function(){
@@ -45267,9 +45473,12 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index21 = 0, $$l = $$obj.length; pug_index21 < $$l; pug_index21++) {
         var r = $$obj[pug_index21];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
       }
   } else {
     var $$l = 0;
@@ -45277,9 +45486,12 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index21];
 
+if (r != 'unmentioned') {
+
 pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
+}
     }
   }
 }).call(this);
