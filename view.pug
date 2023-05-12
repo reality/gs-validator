@@ -4,11 +4,12 @@
   h1 Questionairre for #{uid}
   
   -var gcount = 0 
+
+  h3 Link: 
+    a(href='file://uhb/Userdata/Cardiac/COMMON/WM%20Bradlow/all_search_results/'+uid+'.pdf' target='_blank') #{uid}
+
   each g in questions.groups
     h2 #{g.title}
-
-    h3 Link: 
-      a(href='https://doi.org/'+uid target='_blank') https://doi.org/#{uid}
 
     each qg in g.questions
       -gcount++

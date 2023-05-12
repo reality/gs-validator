@@ -1,4 +1,4 @@
-(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.e = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.f = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 var url = require('url'),
     indexTemplate = require('./index.pug'),
     listTemplate = require('./list.pug'),
@@ -312,7 +312,7 @@ pug_html = pug_html + "\n        \u003Cdiv class=\"modal-footer\"\u003E";
 
 pug_html = pug_html + "\n          \u003Cp\u003E";
 
-pug_html = pug_html + "Version: 0.4.2-gsval-HFCod\u003C\u002Fp\u003E\n        \u003C\u002Fdiv\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E\n\u003C\u002Fdiv\u003E";return pug_html;}
+pug_html = pug_html + "Version: 0.4.4-gsval-HCM\u003C\u002Fp\u003E\n        \u003C\u002Fdiv\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E\n\u003C\u002Fdiv\u003E";return pug_html;}
 
 },{"fs":11,"pug-runtime":8}],3:[function(require,module,exports){
 var pug = require('pug-runtime');
@@ -44224,7 +44224,7 @@ module.exports={
           }, 
           {
             "id": "sm1.1",
-            "question": "Does this letter say that the patient has a positive family history of HCM?",
+            "question": "Does this letter say that the patient has a positive family history of HCM (including positive HCM history where gene testing is negative)?",
             "responses": [ "yes", "no" ],
             "askif": [
               { "id": "sm1.0", "response": [ "yes" ] }
@@ -44248,8 +44248,8 @@ module.exports={
           },
           {
             "id": "sm1.3",
-            "question": "Does this letter say that an affected family member is either: gene-positive and carrying a likely pathogenic mutation, or gene negative and carries a VUS?",
-            "responses": [ "yes", "no", "not sure" ],
+            "question": "Does this letter say that the affected person is either: gene-positive and carrying a likely pathogenic mutation, or gene negative and carries a VUS?",
+            "responses": [ "pathogenic mutation", "likely pathogenic mutation", "VUS", "negative", "not sure" ],
             "askif": [
               { "id": "sm1.2", "response": [ "yes" ] }
             ]
@@ -44259,12 +44259,20 @@ module.exports={
             "question": "Is the gene specified?",
             "responses": [ "[INPUT]", "no" ],
             "askif": [
-              { "id": "sm1.3", "response": [ "yes" ] }
+              { "id": "sm1.3", "response": [ "pathogenic mutation", "likely pathogenic mutation", "VUS" ] }
             ]
           },
           {
             "id": "sm1.5",
-            "question": "Does the letter state whether the affected family member is phenotype positive or negative?",
+            "question": "Does the letter say there are one or more family members who are gene positive, but are phenotype negative?",
+            "responses": [ "yes", "no", "not sure" ],
+            "askif": [
+              { "id": "sm1.2", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm1.6",
+            "question": "Does the letter state whether any affected family member is phenotype positive or negative?",
             "responses": [ "positive", "negative", "unmentioned" ],
             "askif": [
               { "id": "sm1.1", "response": [ "yes" ] }
@@ -44281,7 +44289,7 @@ module.exports={
           },
           {
             "id": "sm2.1",
-            "question": "Does this letter say that the person has a family history of sudden cardiac death?",
+            "question": "Does this letter say that the patient has a family history of sudden cardiac death?",
             "responses": [ "yes", "no" ],
             "askif": [
               { "id": "sm2.0", "response": [ "yes" ] }
@@ -44298,18 +44306,10 @@ module.exports={
           },
           {
             "id": "sm3.1",
-            "question": "Does this letter say that the person is gene-positive for HCM?",
-            "responses": [ "yes", "no" ],
+            "question": "Does this letter say that the patient is either: gene-positive and carrying a likely pathogenic mutation, or gene negative and carries a VUS?",
+            "responses": [ "pathogenic mutation", "likely pathogenic mutation", "VUS", "negative", "not sure" ],
             "askif": [
               { "id": "sm3.0", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "sm3.2",
-            "question": "Does this letter say that the person is gene-negative for HCM?",
-            "responses": [ "yes", "no" ],
-            "askif": [
-              { "id": "sm3.1", "response": [ "no" ] }
             ]
           },
           {
@@ -44317,230 +44317,7 @@ module.exports={
             "question": "Is the gene specified?",
             "responses": [ "[INPUT]", "no" ],
             "askif": [
-              { "id": "sm3.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "sm3.4",
-            "question": "Does this letter say that the person has a VUS for HCM?",
-            "responses": [ "yes", "no" ],
-            "askif": [
-              { "id": "sm3.2", "response": [ "no" ] }
-            ]
-          },
-          {
-            "id": "sm3.5",
-            "question": "Is the gene specified?",
-            "responses": [ "[INPUT]", "no" ],
-            "askif": [
-              { "id": "sm3.4", "response": [ "yes" ] }
-            ]
-          }
-        ]
-      ]
-    }, 
-    { 
-      "title": "Sudden Death Scoring",
-      "questions": [
-        [
-          {
-            "id": "scd0.0",
-            "question": "What is the maximum wall thickness (in MM)?",
-            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "scd0.1",
-            "question": "Is there a history of unexplained syncope?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "scd0.2",
-            "question": "Is there an LV apical aneurysm?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "scd0.3",
-            "question": "Is there extensive scarring on MRI?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "scd0.4",
-            "question": "Is there non-sustained VT?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "scd0.5",
-            "question": "What is the LA size (in MM)?",
-            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "scd0.6",
-            "question": "What is the maximum LVOT gradient at rest (mmhg)?",
-            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "scd0.6",
-            "question": "What is the maximum LVOT gradient with valsalva (mmhg)?",
-            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          }
-        ]
-      ]
-    },
-    { 
-      "title": "Relevant Complications",
-      "questions": [
-        [
-          {
-            "id": "com0.0",
-            "question": "Does the patient have a history of cardiac arrest?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "com0.1",
-            "question": "Does the person have LV impairment (EF<50%)?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "com0.2",
-            "question": "Does the person have heart failure?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "com0.3",
-            "question": "Does the person have atrial fibrillation?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "com0.4",
-            "question": "Does the person have an LVOT obstruction?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          }
-        ]
-      ]
-    },
-    { 
-      "title": "Relevant Interventions",
-      "questions": [
-        [
-          {
-            "id": "rin0.0",
-            "question": "Does the person have a defibrillator?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "rin0.1",
-            "question": "Have they had appropriate shocks?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "rin0.0", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "rin0.2",
-            "question": "Have they had inappropriate shocks?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "rin0.0", "response": [ "yes" ] }
-            ]
-          }
-        ],
-        [
-          {
-            "id": "rin1.0",
-            "question": "Does the patient have a pacemaker?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-              "id": "rin1.1",
-            "question": "Does the patient have a CRT?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-              "id": "rin1.2",
-            "question": "Has the person had a heart transplant?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "rin1.3",
-            "question": "Does the person have an LVAD?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "rin1.4",
-            "question": "Has the patient had an ablation for atrial fibrillation?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "rin1.5",
-            "question": "Has the patient had a myectomy?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "rin1.6",
-            "question": "Has the patient had an alcohol septal ablation?",
-            "responses": [ "yes", "no", "unmentioned", "not sure" ],
-            "askif": [
-              { "id": "hcm0.1", "response": [ "yes" ] }
+              { "id": "sm3.1", "response": [ "pathogenic mutation", "likely pathogenic mutation", "VUS" ] }
             ]
           }
         ]
@@ -44575,6 +44352,14 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp))
 
 var gcount = 0 
 
+pug_html = pug_html + "\n  \u003Ch3\u003E";
+
+pug_html = pug_html + "Link: ";
+
+pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'file://uhb/Userdata/Cardiac/COMMON/WM%20Bradlow/all_search_results/'+uid+'.pdf', true, false)+" target=\"_blank\"") + "\u003E";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Fh3\u003E";
+
 // iterate questions.groups
 ;(function(){
   var $$obj = questions.groups;
@@ -44585,16 +44370,6 @@ var gcount = 0
 pug_html = pug_html + "\n  \u003Ch2\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh2\u003E";
-
-pug_html = pug_html + "\n  \u003Ch3\u003E";
-
-pug_html = pug_html + "Link: ";
-
-pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'https://doi.org/'+uid, true, false)+" target=\"_blank\"") + "\u003E";
-
-pug_html = pug_html + "https:\u002F\u002Fdoi.org\u002F";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Fh3\u003E";
 
 // iterate g.questions
 ;(function(){
@@ -45070,16 +44845,6 @@ pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E"
 pug_html = pug_html + "\n  \u003Ch2\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh2\u003E";
-
-pug_html = pug_html + "\n  \u003Ch3\u003E";
-
-pug_html = pug_html + "Link: ";
-
-pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'https://doi.org/'+uid, true, false)+" target=\"_blank\"") + "\u003E";
-
-pug_html = pug_html + "https:\u002F\u002Fdoi.org\u002F";
-
-pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Fh3\u003E";
 
 // iterate g.questions
 ;(function(){
