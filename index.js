@@ -94,7 +94,7 @@ const loadIndex = (cb) => {
     userInfo = r.userInfo;
   }));
   $('#samFileInput').bind('change', readFileFactory((text) => {
-    sample = text.split('\n');
+    sample = text.split(/\r?\n/)
   }));
 };
 
