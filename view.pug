@@ -1,44 +1,49 @@
 .container
-  h1 
-    a(href='javascript:f.loadList()') Back to list 
-  h1 Questionairre for #{uid}
+  .row 
+    .col-md-2
+      h2 
+        a(href='javascript:f.loadList()') Back to list 
+    .col-md-7
+      h2 Questionnaire for #{uid}
   
   -var gcount = 0 
 
-  h3 Link: 
-    a(href='file://uhb/Userdata/Cardiac/COMMON/WM%20Bradlow/all_search_results/'+uid+'.pdf' target='_blank') #{uid}
+  .row
+      .col-md-6
+        div
+          iframe(style='width:100%;height:700px' frameborder='0' src='docs/'+uid+'.pdf')
+      .col-md-6
+        each g in questions.groups
+          h3 #{g.title}
 
-  each g in questions.groups
-    h2 #{g.title}
+          each qg in g.questions
+            -gcount++
+            table.question.stripe(id='question::'+gcount)
+              tbody
+                each q in qg
+                  tr(width="100%")
+                    td(style='text-align:left' width="80%")
+                      label #{q.question}
+                    td(style='align:right;text-align:right;')
+                      // no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...
+                      - var id = q.id
+                      if q.askif
+                        select.v(id=q.id onchange="javascript:f.changedAnswer(id)" disabled)
+                          if q.responses.indexOf('unmentioned') != -1
+                            option(value="unmentioned") unmentioned
+                          else
+                            option(value=" ")
+                          each r in q.responses
+                            if r != 'unmentioned'
+                              option(value=r) #{r}
 
-    each qg in g.questions
-      -gcount++
-      table.question.stripe(id='question::'+gcount)
-        tbody
-          each q in qg
-            tr(width="100%")
-              td(style='text-align:left' width="80%")
-                label #{q.question}
-              td(style='align:right;text-align:right;')
-                // no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...
-                - var id = q.id
-                if q.askif
-                  select.v(id=q.id onchange="javascript:f.changedAnswer(id)" disabled)
-                    if q.responses.indexOf('unmentioned') != -1
-                      option(value="unmentioned") unmentioned
-                    else
-                      option(value=" ")
-                    each r in q.responses
-                      if r != 'unmentioned'
-                        option(value=r) #{r}
-
-                else 
-                  select.v(id=q.id onchange="javascript:f.changedAnswer(id)")
-                    option(value=' ')
-                    each r in q.responses
-                      option(value=r) #{r}
-                if q.responses.includes('[INPUT]')
-                  input(id=q.id+'::txt')
+                      else 
+                        select.v(id=q.id onchange="javascript:f.changedAnswer(id)")
+                          option(value=' ')
+                          each r in q.responses
+                            option(value=r) #{r}
+                      if q.responses.includes('[INPUT]')
+                        input(id=q.id+'::txt')
 
   label.h5 Additional Comments
   br

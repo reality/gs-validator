@@ -188,6 +188,8 @@ const loadView = (uid) => {
     });
   }
  
+  refreshDisabled();
+
   // on save
   $('#save').bind('click', () => {
     let result = {
@@ -44171,12 +44173,12 @@ module.exports={
         [
           {
             "id": "hcm0.0",
-            "question": "Does this letter mention hypertrophic cardiomyopathy?",
+            "question": "Does this document mention hypertrophic cardiomyopathy?",
             "responses": [ "yes", "no", "not sure" ]
           },
           {
             "id": "hcm0.1",
-            "question": "Does this letter say that the patient has HCM?",
+            "question": "Does this document say that the patient has HCM?",
             "responses": [ "yes", "no" ],
             "askif": [
               { "id": "hcm0.0", "response": [ "yes" ] }
@@ -44184,7 +44186,7 @@ module.exports={
           },
           {
             "id": "hcm0.2",
-            "question": "Does this letter say that the patient does not have HCM?",
+            "question": "Does this document say that the patient does not have HCM?",
             "responses": [ "yes", "no" ],
             "askif": [
               { "id": "hcm0.1", "response": [ "no" ] }
@@ -44199,7 +44201,7 @@ module.exports={
         [
           {
             "id": "sm0.0",
-            "question": "Does this letter mention screening?",
+            "question": "Does this document mention screening?",
             "responses": [ "yes", "no", "not sure" ],
             "askif": [
               { "id": "hcm0.0", "response": [ "yes" ] }
@@ -44207,7 +44209,7 @@ module.exports={
           },
           {
             "id": "sm0.1",
-            "question": "Does this letter say that the patient has been screened, or is being screened, for HCM?",
+            "question": "Does this document say that the subject has been screened, or is being screened, for HCM?",
             "responses": [ "yes", "no" ],
             "askif": [
               { "id": "sm0.0", "response": [ "yes" ] }
@@ -44216,7 +44218,7 @@ module.exports={
         ], [
           {
             "id": "sm1.0",
-            "question": "Does this letter mention family history of HCM in any context?",
+            "question": "Does this document mention family history of HCM in any context?",
             "responses": [ "yes", "no", "not sure" ],
             "askif": [
               { "id": "hcm0.0", "response": [ "yes" ] }
@@ -44224,7 +44226,7 @@ module.exports={
           }, 
           {
             "id": "sm1.1",
-            "question": "Does this letter say that the patient has a positive family history of HCM (including positive HCM history where gene testing is negative)?",
+            "question": "Does this document say that the subject has a positive family history of HCM?",
             "responses": [ "yes", "no" ],
             "askif": [
               { "id": "sm1.0", "response": [ "yes" ] }
@@ -44232,7 +44234,7 @@ module.exports={
           },
           {
             "id": "sm1.1.1",
-            "question": "Does this letter say that the patient has a negative family history of HCM?",
+            "question": "Does this document say that the subject has a negative family history of HCM?",
             "responses": [ "yes", "no" ],
             "askif": [
               { "id": "sm1.1", "response": [ "no" ] }
@@ -44240,7 +44242,7 @@ module.exports={
           },
           {
             "id": "sm1.2",
-            "question": "Does the letter mention the genetic status of an affected family member?",
+            "question": "Does the document mention the genetic status of an affected family member?",
             "responses": [ "yes", "no", "not sure" ],
             "askif": [
               { "id": "sm1.1", "response": [ "yes" ] }
@@ -44248,8 +44250,8 @@ module.exports={
           },
           {
             "id": "sm1.3",
-            "question": "Does this letter say that the affected person is either: gene-positive and carrying a likely pathogenic mutation, or gene negative and carries a VUS?",
-            "responses": [ "pathogenic mutation", "likely pathogenic mutation", "VUS", "negative", "not sure" ],
+            "question": "Does this document say that an affected family member is any of: gene-positive and carrying a likely pathogenic mutation, or gene negative and carries a VUS?",
+            "responses": [ "yes", "no", "not sure" ],
             "askif": [
               { "id": "sm1.2", "response": [ "yes" ] }
             ]
@@ -44259,20 +44261,12 @@ module.exports={
             "question": "Is the gene specified?",
             "responses": [ "[INPUT]", "no" ],
             "askif": [
-              { "id": "sm1.3", "response": [ "pathogenic mutation", "likely pathogenic mutation", "VUS" ] }
+              { "id": "sm1.3", "response": [ "yes" ] }
             ]
           },
           {
             "id": "sm1.5",
-            "question": "Does the letter say there are one or more family members who are gene positive, but are phenotype negative?",
-            "responses": [ "yes", "no", "not sure" ],
-            "askif": [
-              { "id": "sm1.2", "response": [ "yes" ] }
-            ]
-          },
-          {
-            "id": "sm1.6",
-            "question": "Does the letter state whether any affected family member is phenotype positive or negative?",
+            "question": "Does the document state whether the affected family member is phenotype positive or negative?",
             "responses": [ "positive", "negative", "unmentioned" ],
             "askif": [
               { "id": "sm1.1", "response": [ "yes" ] }
@@ -44281,7 +44275,7 @@ module.exports={
         ], [
           {
             "id": "sm2.0",
-            "question": "Does this letter mention family history of sudden cardiac death?",
+            "question": "Does this document mention family history of sudden cardiac death?",
             "responses": [ "yes", "no", "not sure" ],
             "askif": [
               { "id": "hcm0.0", "response": [ "yes" ] }
@@ -44289,7 +44283,7 @@ module.exports={
           },
           {
             "id": "sm2.1",
-            "question": "Does this letter say that the patient has a family history of sudden cardiac death?",
+            "question": "Does this document say that the person has a family history of sudden cardiac death?",
             "responses": [ "yes", "no" ],
             "askif": [
               { "id": "sm2.0", "response": [ "yes" ] }
@@ -44298,7 +44292,7 @@ module.exports={
         ], [
           {
             "id": "sm3.0",
-            "question": "Does this letter mention the patient's genetic status?",
+            "question": "Does this document mention the subject's genetic status?",
             "responses": [ "yes", "no", "not sure" ],
             "askif": [
               { "id": "hcm0.0", "response": [ "yes" ] }
@@ -44306,10 +44300,18 @@ module.exports={
           },
           {
             "id": "sm3.1",
-            "question": "Does this letter say that the patient is either: gene-positive and carrying a likely pathogenic mutation, or gene negative and carries a VUS?",
-            "responses": [ "pathogenic mutation", "likely pathogenic mutation", "VUS", "negative", "not sure" ],
+            "question": "Does this document say that the person is gene-positive for HCM?",
+            "responses": [ "yes", "no" ],
             "askif": [
               { "id": "sm3.0", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm3.2",
+            "question": "Does this document say that the person is gene-negative for HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "sm3.1", "response": [ "no" ] }
             ]
           },
           {
@@ -44317,7 +44319,266 @@ module.exports={
             "question": "Is the gene specified?",
             "responses": [ "[INPUT]", "no" ],
             "askif": [
-              { "id": "sm3.1", "response": [ "pathogenic mutation", "likely pathogenic mutation", "VUS" ] }
+              { "id": "sm3.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "sm3.4",
+            "question": "Does this document say that the person has a VUS for HCM?",
+            "responses": [ "yes", "no" ],
+            "askif": [
+              { "id": "sm3.2", "response": [ "no" ] }
+            ]
+          },
+          {
+            "id": "sm3.5",
+            "question": "Is the gene specified?",
+            "responses": [ "[INPUT]", "no" ],
+            "askif": [
+              { "id": "sm3.4", "response": [ "yes" ] }
+            ]
+          }
+        ]
+      ]
+    }, 
+    { 
+      "title": "Sudden Death Scoring",
+      "questions": [
+        [
+          {
+            "id": "scd0.0",
+            "question": "What is the maximum wall thickness (in MM)?",
+            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.1",
+            "question": "Is there a history of unexplained syncope?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.2",
+            "question": "Is there an LV apical aneurysm?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.3",
+            "question": "Is there extensive scarring on MRI?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.4",
+            "question": "Is there non-sustained VT?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.5",
+            "question": "What is the LA size (in MM)?",
+            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.6",
+            "question": "What is the maximum LVOT gradient at rest (mmhg)?",
+            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "scd0.7",
+            "question": "What is the maximum LVOT gradient with valsalva (mmhg)?",
+            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          }
+        ],
+        [
+          {
+            "id": "scd1.0",
+            "question": "Does the letter give an ESC HCM Risk SCD score?",
+            "responses": [ "[INPUT]", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          }
+        ]
+      ]
+    },
+    { 
+      "title": "Relevant Complications",
+      "questions": [
+        [
+          {
+            "id": "com0.0.0",
+            "question": "Does the person have an associated NYHA score?",
+            "responses": [ "I", "II", "III", "IV", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.0",
+            "question": "Does the person have a history of cardiac arrest?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.1",
+            "question": "Does the person have LV impairment (EF<50%)?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.2",
+            "question": "Does the person have heart failure?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.3",
+            "question": "Does the person have atrial fibrillation?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.3.1",
+            "question": "Has the person had CVA (Cerebrovascular Accident)?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "com0.4",
+            "question": "Does the person have an LVOT obstruction?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          }
+        ]
+      ]
+    },
+    { 
+      "title": "Relevant Interventions",
+      "questions": [
+        [
+          {
+            "id": "rin0.0",
+            "question": "Does the person have a defibrillator?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          }, 
+          {
+            "id": "rin0.1",
+            "question": "Have they had appropriate shocks?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "rin0.0", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin0.2",
+            "question": "Have they had inappropriate shocks?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "rin0.0", "response": [ "yes" ] }
+            ]
+          }
+        ],
+        [
+          {
+            "id": "rin0.0.1",
+            "question": "Does the person have VT (Ventricular Tachycardia, lasting 30 seconds or longer)?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          }
+        ],
+        [
+          {
+            "id": "rin1.0",
+            "question": "Does the patient have a pacemaker?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+              "id": "rin1.1",
+            "question": "Does the patient have a CRT?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+              "id": "rin1.2",
+            "question": "Has the person had a heart transplant?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin1.3",
+            "question": "Does the person have an LVAD?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin1.4",
+            "question": "Has the patient had an ablation for atrial fibrillation?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin1.5",
+            "question": "Has the patient had a myectomy?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
+            ]
+          },
+          {
+            "id": "rin1.6",
+            "question": "Has the patient had an alcohol septal ablation?",
+            "responses": [ "yes", "no", "unmentioned", "not sure" ],
+            "askif": [
+              { "id": "hcm0.1", "response": [ "yes" ] }
             ]
           }
         ]
@@ -44336,29 +44597,39 @@ function pug_rethrow(n,e,r,t){if(!(n instanceof Error))throw n;if(!("undefined"=
 
 pug_html = pug_html + "\n\u003Cdiv class=\"container\"\u003E";
 
-pug_html = pug_html + "\n  \u003Ch1\u003E";
+pug_html = pug_html + "\n  \u003Cdiv class=\"row\"\u003E";
+
+pug_html = pug_html + " ";
+
+pug_html = pug_html + "\n    \u003Cdiv class=\"col-md-2\"\u003E";
+
+pug_html = pug_html + "\n      \u003Ch2\u003E";
 
 pug_html = pug_html + " ";
 
 pug_html = pug_html + "\u003Ca href=\"javascript:f.loadList()\"\u003E";
 
-pug_html = pug_html + "Back to list \u003C\u002Fa\u003E\u003C\u002Fh1\u003E";
+pug_html = pug_html + "Back to list \u003C\u002Fa\u003E\u003C\u002Fh2\u003E\n    \u003C\u002Fdiv\u003E";
 
-pug_html = pug_html + "\n  \u003Ch1\u003E";
+pug_html = pug_html + "\n    \u003Cdiv class=\"col-md-7\"\u003E";
 
-pug_html = pug_html + "Questionairre for ";
+pug_html = pug_html + "\n      \u003Ch2\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fh1\u003E";
+pug_html = pug_html + "Questionnaire for ";
+
+pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fh2\u003E\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E";
 
 var gcount = 0 
 
-pug_html = pug_html + "\n  \u003Ch3\u003E";
+pug_html = pug_html + "\n  \u003Cdiv class=\"row\"\u003E";
 
-pug_html = pug_html + "Link: ";
+pug_html = pug_html + "\n    \u003Cdiv class=\"col-md-6\"\u003E";
 
-pug_html = pug_html + "\u003Ca" + (pug_attr("href", 'file://uhb/Userdata/Cardiac/COMMON/WM%20Bradlow/all_search_results/'+uid+'.pdf', true, false)+" target=\"_blank\"") + "\u003E";
+pug_html = pug_html + "\n      \u003Cdiv\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp)) + "\u003C\u002Fa\u003E\u003C\u002Fh3\u003E";
+pug_html = pug_html + "\n        \u003Ciframe" + (" style=\"width:100%;height:700px\" frameborder=\"0\""+pug_attr("src", 'docs/'+uid+'.pdf', true, false)) + "\u003E\u003C\u002Fiframe\u003E\n      \u003C\u002Fdiv\u003E\n    \u003C\u002Fdiv\u003E";
+
+pug_html = pug_html + "\n    \u003Cdiv class=\"col-md-6\"\u003E";
 
 // iterate questions.groups
 ;(function(){
@@ -44367,9 +44638,9 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = uid) ? "" : pug_interp))
       for (var pug_index0 = 0, $$l = $$obj.length; pug_index0 < $$l; pug_index0++) {
         var g = $$obj[pug_index0];
 
-pug_html = pug_html + "\n  \u003Ch2\u003E";
+pug_html = pug_html + "\n      \u003Ch3\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh2\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
 
 // iterate g.questions
 ;(function(){
@@ -44380,9 +44651,9 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_inte
 
 gcount++
 
-pug_html = pug_html + "\n  \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
+pug_html = pug_html + "\n      \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
 
-pug_html = pug_html + "\n    \u003Ctbody\u003E";
+pug_html = pug_html + "\n        \u003Ctbody\u003E";
 
 // iterate qg
 ;(function(){
@@ -44391,33 +44662,33 @@ pug_html = pug_html + "\n    \u003Ctbody\u003E";
       for (var pug_index2 = 0, $$l = $$obj.length; pug_index2 < $$l; pug_index2++) {
         var q = $$obj[pug_index2];
 
-pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+pug_html = pug_html + "\n          \u003Ctr width=\"100%\"\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-pug_html = pug_html + "\n          \u003Clabel\u003E";
+pug_html = pug_html + "\n              \u003Clabel\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n            \u003C\u002Ftd\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+pug_html = pug_html + "\n              \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
 var id = q.id
 
 if (q.askif) {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
 if (q.responses.indexOf('unmentioned') != -1) {
 
-pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\"unmentioned\"\u003E";
 
 pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
 }
 else {
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 }
 
 // iterate q.responses
@@ -44429,7 +44700,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44442,7 +44713,7 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44450,13 +44721,13 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 else {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
 // iterate q.responses
 ;(function(){
@@ -44465,7 +44736,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index4 = 0, $$l = $$obj.length; pug_index4 < $$l; pug_index4++) {
         var r = $$obj[pug_index4];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
@@ -44475,21 +44746,21 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index4];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 
 if (q.responses.includes('[INPUT]')) {
 
-pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+pug_html = pug_html + "\n              \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
-pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n            \u003C\u002Ftd\u003E\n          \u003C\u002Ftr\u003E";
       }
   } else {
     var $$l = 0;
@@ -44497,33 +44768,33 @@ pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003
       $$l++;
       var q = $$obj[pug_index2];
 
-pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+pug_html = pug_html + "\n          \u003Ctr width=\"100%\"\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-pug_html = pug_html + "\n          \u003Clabel\u003E";
+pug_html = pug_html + "\n              \u003Clabel\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n            \u003C\u002Ftd\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+pug_html = pug_html + "\n              \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
 var id = q.id
 
 if (q.askif) {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
 if (q.responses.indexOf('unmentioned') != -1) {
 
-pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\"unmentioned\"\u003E";
 
 pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
 }
 else {
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 }
 
 // iterate q.responses
@@ -44535,7 +44806,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44548,7 +44819,7 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44556,13 +44827,13 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 else {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
 // iterate q.responses
 ;(function(){
@@ -44571,7 +44842,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index6 = 0, $$l = $$obj.length; pug_index6 < $$l; pug_index6++) {
         var r = $$obj[pug_index6];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
@@ -44581,26 +44852,26 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index6];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 
 if (q.responses.includes('[INPUT]')) {
 
-pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+pug_html = pug_html + "\n              \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
-pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n            \u003C\u002Ftd\u003E\n          \u003C\u002Ftr\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
+pug_html = pug_html + "\n        \u003C\u002Ftbody\u003E\n      \u003C\u002Ftable\u003E";
       }
   } else {
     var $$l = 0;
@@ -44610,9 +44881,9 @@ pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E"
 
 gcount++
 
-pug_html = pug_html + "\n  \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
+pug_html = pug_html + "\n      \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
 
-pug_html = pug_html + "\n    \u003Ctbody\u003E";
+pug_html = pug_html + "\n        \u003Ctbody\u003E";
 
 // iterate qg
 ;(function(){
@@ -44621,33 +44892,33 @@ pug_html = pug_html + "\n    \u003Ctbody\u003E";
       for (var pug_index7 = 0, $$l = $$obj.length; pug_index7 < $$l; pug_index7++) {
         var q = $$obj[pug_index7];
 
-pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+pug_html = pug_html + "\n          \u003Ctr width=\"100%\"\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-pug_html = pug_html + "\n          \u003Clabel\u003E";
+pug_html = pug_html + "\n              \u003Clabel\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n            \u003C\u002Ftd\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+pug_html = pug_html + "\n              \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
 var id = q.id
 
 if (q.askif) {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
 if (q.responses.indexOf('unmentioned') != -1) {
 
-pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\"unmentioned\"\u003E";
 
 pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
 }
 else {
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 }
 
 // iterate q.responses
@@ -44659,7 +44930,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44672,7 +44943,7 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44680,13 +44951,13 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 else {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
 // iterate q.responses
 ;(function(){
@@ -44695,7 +44966,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index9 = 0, $$l = $$obj.length; pug_index9 < $$l; pug_index9++) {
         var r = $$obj[pug_index9];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
@@ -44705,21 +44976,21 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index9];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 
 if (q.responses.includes('[INPUT]')) {
 
-pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+pug_html = pug_html + "\n              \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
-pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n            \u003C\u002Ftd\u003E\n          \u003C\u002Ftr\u003E";
       }
   } else {
     var $$l = 0;
@@ -44727,33 +44998,33 @@ pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003
       $$l++;
       var q = $$obj[pug_index7];
 
-pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+pug_html = pug_html + "\n          \u003Ctr width=\"100%\"\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-pug_html = pug_html + "\n          \u003Clabel\u003E";
+pug_html = pug_html + "\n              \u003Clabel\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n            \u003C\u002Ftd\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+pug_html = pug_html + "\n              \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
 var id = q.id
 
 if (q.askif) {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
 if (q.responses.indexOf('unmentioned') != -1) {
 
-pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\"unmentioned\"\u003E";
 
 pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
 }
 else {
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 }
 
 // iterate q.responses
@@ -44765,7 +45036,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44778,7 +45049,7 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44786,13 +45057,13 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 else {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
 // iterate q.responses
 ;(function(){
@@ -44801,7 +45072,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index11 = 0, $$l = $$obj.length; pug_index11 < $$l; pug_index11++) {
         var r = $$obj[pug_index11];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
@@ -44811,26 +45082,26 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index11];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 
 if (q.responses.includes('[INPUT]')) {
 
-pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+pug_html = pug_html + "\n              \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
-pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n            \u003C\u002Ftd\u003E\n          \u003C\u002Ftr\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
+pug_html = pug_html + "\n        \u003C\u002Ftbody\u003E\n      \u003C\u002Ftable\u003E";
     }
   }
 }).call(this);
@@ -44842,9 +45113,9 @@ pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E"
       $$l++;
       var g = $$obj[pug_index0];
 
-pug_html = pug_html + "\n  \u003Ch2\u003E";
+pug_html = pug_html + "\n      \u003Ch3\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh2\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_interp)) + "\u003C\u002Fh3\u003E";
 
 // iterate g.questions
 ;(function(){
@@ -44855,9 +45126,9 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = g.title) ? "" : pug_inte
 
 gcount++
 
-pug_html = pug_html + "\n  \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
+pug_html = pug_html + "\n      \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
 
-pug_html = pug_html + "\n    \u003Ctbody\u003E";
+pug_html = pug_html + "\n        \u003Ctbody\u003E";
 
 // iterate qg
 ;(function(){
@@ -44866,33 +45137,33 @@ pug_html = pug_html + "\n    \u003Ctbody\u003E";
       for (var pug_index13 = 0, $$l = $$obj.length; pug_index13 < $$l; pug_index13++) {
         var q = $$obj[pug_index13];
 
-pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+pug_html = pug_html + "\n          \u003Ctr width=\"100%\"\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-pug_html = pug_html + "\n          \u003Clabel\u003E";
+pug_html = pug_html + "\n              \u003Clabel\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n            \u003C\u002Ftd\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+pug_html = pug_html + "\n              \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
 var id = q.id
 
 if (q.askif) {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
 if (q.responses.indexOf('unmentioned') != -1) {
 
-pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\"unmentioned\"\u003E";
 
 pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
 }
 else {
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 }
 
 // iterate q.responses
@@ -44904,7 +45175,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44917,7 +45188,7 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -44925,13 +45196,13 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 else {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
 // iterate q.responses
 ;(function(){
@@ -44940,7 +45211,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index15 = 0, $$l = $$obj.length; pug_index15 < $$l; pug_index15++) {
         var r = $$obj[pug_index15];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
@@ -44950,21 +45221,21 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index15];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 
 if (q.responses.includes('[INPUT]')) {
 
-pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+pug_html = pug_html + "\n              \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
-pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n            \u003C\u002Ftd\u003E\n          \u003C\u002Ftr\u003E";
       }
   } else {
     var $$l = 0;
@@ -44972,33 +45243,33 @@ pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003
       $$l++;
       var q = $$obj[pug_index13];
 
-pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+pug_html = pug_html + "\n          \u003Ctr width=\"100%\"\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-pug_html = pug_html + "\n          \u003Clabel\u003E";
+pug_html = pug_html + "\n              \u003Clabel\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n            \u003C\u002Ftd\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+pug_html = pug_html + "\n              \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
 var id = q.id
 
 if (q.askif) {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
 if (q.responses.indexOf('unmentioned') != -1) {
 
-pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\"unmentioned\"\u003E";
 
 pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
 }
 else {
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 }
 
 // iterate q.responses
@@ -45010,7 +45281,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -45023,7 +45294,7 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -45031,13 +45302,13 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 else {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
 // iterate q.responses
 ;(function(){
@@ -45046,7 +45317,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index17 = 0, $$l = $$obj.length; pug_index17 < $$l; pug_index17++) {
         var r = $$obj[pug_index17];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
@@ -45056,26 +45327,26 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index17];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 
 if (q.responses.includes('[INPUT]')) {
 
-pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+pug_html = pug_html + "\n              \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
-pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n            \u003C\u002Ftd\u003E\n          \u003C\u002Ftr\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
+pug_html = pug_html + "\n        \u003C\u002Ftbody\u003E\n      \u003C\u002Ftable\u003E";
       }
   } else {
     var $$l = 0;
@@ -45085,9 +45356,9 @@ pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E"
 
 gcount++
 
-pug_html = pug_html + "\n  \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
+pug_html = pug_html + "\n      \u003Ctable" + (" class=\"question stripe\""+pug_attr("id", 'question::'+gcount, true, false)) + "\u003E";
 
-pug_html = pug_html + "\n    \u003Ctbody\u003E";
+pug_html = pug_html + "\n        \u003Ctbody\u003E";
 
 // iterate qg
 ;(function(){
@@ -45096,33 +45367,33 @@ pug_html = pug_html + "\n    \u003Ctbody\u003E";
       for (var pug_index18 = 0, $$l = $$obj.length; pug_index18 < $$l; pug_index18++) {
         var q = $$obj[pug_index18];
 
-pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+pug_html = pug_html + "\n          \u003Ctr width=\"100%\"\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-pug_html = pug_html + "\n          \u003Clabel\u003E";
+pug_html = pug_html + "\n              \u003Clabel\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n            \u003C\u002Ftd\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+pug_html = pug_html + "\n              \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
 var id = q.id
 
 if (q.askif) {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
 if (q.responses.indexOf('unmentioned') != -1) {
 
-pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\"unmentioned\"\u003E";
 
 pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
 }
 else {
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 }
 
 // iterate q.responses
@@ -45134,7 +45405,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -45147,7 +45418,7 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -45155,13 +45426,13 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 else {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
 // iterate q.responses
 ;(function(){
@@ -45170,7 +45441,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index20 = 0, $$l = $$obj.length; pug_index20 < $$l; pug_index20++) {
         var r = $$obj[pug_index20];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
@@ -45180,21 +45451,21 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index20];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 
 if (q.responses.includes('[INPUT]')) {
 
-pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+pug_html = pug_html + "\n              \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
-pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n            \u003C\u002Ftd\u003E\n          \u003C\u002Ftr\u003E";
       }
   } else {
     var $$l = 0;
@@ -45202,33 +45473,33 @@ pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003
       $$l++;
       var q = $$obj[pug_index18];
 
-pug_html = pug_html + "\n      \u003Ctr width=\"100%\"\u003E";
+pug_html = pug_html + "\n          \u003Ctr width=\"100%\"\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"text-align:left\" width=\"80%\"\u003E";
 
-pug_html = pug_html + "\n          \u003Clabel\u003E";
+pug_html = pug_html + "\n              \u003Clabel\u003E";
 
-pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n        \u003C\u002Ftd\u003E";
+pug_html = pug_html + (pug_escape(null == (pug_interp = q.question) ? "" : pug_interp)) + "\u003C\u002Flabel\u003E\n            \u003C\u002Ftd\u003E";
 
-pug_html = pug_html + "\n        \u003Ctd style=\"align:right;text-align:right;\"\u003E";
+pug_html = pug_html + "\n            \u003Ctd style=\"align:right;text-align:right;\"\u003E";
 
-pug_html = pug_html + "\n          \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
+pug_html = pug_html + "\n              \u003C!-- no idea how to avoid repeating the select content here, since the blocking seems to be done for both the html and the conditional...--\u003E";
 
 var id = q.id
 
 if (q.askif) {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\""+pug_attr("disabled", true, true, false)) + "\u003E";
 
 if (q.responses.indexOf('unmentioned') != -1) {
 
-pug_html = pug_html + "\n            \u003Coption value=\"unmentioned\"\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\"unmentioned\"\u003E";
 
 pug_html = pug_html + "unmentioned\u003C\u002Foption\u003E";
 }
 else {
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 }
 
 // iterate q.responses
@@ -45240,7 +45511,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -45253,7 +45524,7 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
 
 if (r != 'unmentioned') {
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
 }
@@ -45261,13 +45532,13 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 else {
 
-pug_html = pug_html + "\n          \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
+pug_html = pug_html + "\n              \u003Cselect" + (" class=\"v\""+pug_attr("id", q.id, true, false)+" onchange=\"javascript:f.changedAnswer(id)\"") + "\u003E";
 
-pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
+pug_html = pug_html + "\n                \u003Coption value=\" \"\u003E\u003C\u002Foption\u003E";
 
 // iterate q.responses
 ;(function(){
@@ -45276,7 +45547,7 @@ pug_html = pug_html + "\n            \u003Coption value=\" \"\u003E\u003C\u002Fo
       for (var pug_index22 = 0, $$l = $$obj.length; pug_index22 < $$l; pug_index22++) {
         var r = $$obj[pug_index22];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
       }
@@ -45286,26 +45557,26 @@ pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) +
       $$l++;
       var r = $$obj[pug_index22];
 
-pug_html = pug_html + "\n            \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
+pug_html = pug_html + "\n                \u003Coption" + (pug_attr("value", r, true, false)) + "\u003E";
 
 pug_html = pug_html + (pug_escape(null == (pug_interp = r) ? "" : pug_interp)) + "\u003C\u002Foption\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n          \u003C\u002Fselect\u003E";
+pug_html = pug_html + "\n              \u003C\u002Fselect\u003E";
 }
 
 if (q.responses.includes('[INPUT]')) {
 
-pug_html = pug_html + "\n          \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
+pug_html = pug_html + "\n              \u003Cinput" + (pug_attr("id", q.id+'::txt', true, false)) + "\u002F\u003E";
 }
-pug_html = pug_html + "\n        \u003C\u002Ftd\u003E\n      \u003C\u002Ftr\u003E";
+pug_html = pug_html + "\n            \u003C\u002Ftd\u003E\n          \u003C\u002Ftr\u003E";
     }
   }
 }).call(this);
 
-pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E";
+pug_html = pug_html + "\n        \u003C\u002Ftbody\u003E\n      \u003C\u002Ftable\u003E";
     }
   }
 }).call(this);
@@ -45314,6 +45585,7 @@ pug_html = pug_html + "\n    \u003C\u002Ftbody\u003E\n  \u003C\u002Ftable\u003E"
   }
 }).call(this);
 
+pug_html = pug_html + "\n    \u003C\u002Fdiv\u003E\n  \u003C\u002Fdiv\u003E";
 
 pug_html = pug_html + "\n  \u003Clabel class=\"h5\"\u003E";
 

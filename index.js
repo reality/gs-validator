@@ -187,6 +187,8 @@ const loadView = (uid) => {
     });
   }
  
+  refreshDisabled();
+
   // on save
   $('#save').bind('click', () => {
     let result = {
